@@ -41,8 +41,11 @@ En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el m
 ```bash
 claude --plugin-dir .            # sesión con el plugin local montado
 /reload-plugins                  # recargar tras editar comandos/skills/hooks
-claude plugin validate . --strict  # gate de estructura (corre también en CI)
+claude plugin validate . --strict        # gate de estructura
+node wiki/_meta/validate-graph.mjs --check  # gate del grafo de doctrina
 ```
+
+El repo del plugin **no usa GitHub Actions**: los gates corren localmente antes de cada release (el desarrollo del plugin no sigue las mismas reglas que el plugin impone a los proyectos).
 
 ## Saltear una guardia (solo humanos)
 
@@ -65,4 +68,4 @@ wiki/             la doctrina: 28 docs en 4 tiers + MANIFIESTO derivado
 
 1. Editá los docs en `wiki/` (frontmatter incluido) en una rama.
 2. Regenerá el índice: `node wiki/_meta/validate-graph.mjs --write` — el `MANIFIESTO.md` es un artefacto derivado, **nunca se edita a mano**.
-3. Abrí un PR a este repo. El gate `validate-graph.mjs --check` corre en CI y falla si el MANIFIESTO quedó desincronizado.
+3. Corré `node wiki/_meta/validate-graph.mjs --check` — falla si el MANIFIESTO quedó desincronizado — y abrí un PR a este repo.
