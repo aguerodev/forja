@@ -34,6 +34,8 @@ echo "== .forja.json =="; node -p 'JSON.parse(require("fs").readFileSync(".forja
 echo "== gate check =="; node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).scripts.check ? "check OK" : "DOCTOR_FAIL sin script check"'
 echo "== settings de equipo =="; grep -q forja .claude/settings.json 2>/dev/null && echo "marketplace forja referenciado" || echo "DOCTOR_WARN .claude/settings.json no referencia el marketplace forja"
 echo "== gitflow =="; git show-ref --verify --quiet refs/heads/main && echo "main OK" || echo "DOCTOR_WARN falta rama main"; git show-ref --verify --quiet refs/heads/develop && echo "develop OK" || echo "DOCTOR_WARN falta rama develop"
+echo "== preview per-dev =="; git config --get forja.devUser || echo "DOCTOR_INFO forja.devUser sin setear - tu preview usara el label generico dev- (colisiona si hay 2+ devs)"
+echo "== artifact store SDD =="; if [ -d openspec ]; then echo "openspec OK"; elif [ -d software_requirements ]; then echo "DOCTOR_WARN hay requerimientos pero NO existe openspec/ - si ya corriste sdd-init, el store quedo en engram (doctrina: openspec, los artefactos viajan en el PR)"; else echo "sin actividad SDD aun"; fi
 echo "== memoria de equipo (engram) =="; node -p 'JSON.parse(require("fs").readFileSync(".engram/config.json","utf8")).project_name' 2>/dev/null || echo "DOCTOR_WARN .engram/config.json ausente"
 git check-ignore -q .engram/engram.db && echo "engram.db gitignoreada OK" || echo "DOCTOR_WARN .engram/engram.db NO esta gitignoreada"
 command -v engram >/dev/null 2>&1 && engram sync --status 2>/dev/null || echo "DOCTOR_INFO sin CLI engram - sync de memoria de equipo inactivo"
@@ -58,5 +60,7 @@ Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y co
 - sin script `check` → agregar el gate único a `package.json` (doctrina: gates y tooling).
 - settings sin marketplace → agregar `extraKnownMarketplaces`/`enabledPlugins` de forja a `.claude/settings.json`.
 - falta develop → `git branch develop && git push -u origin develop`.
+- `forja.devUser` sin setear → `git config --local forja.devUser "$(gh api user -q .login | tr '[:upper:]' '[:lower:]')"` — define el hostname de TU preview.
+- requerimientos sin `openspec/` → si el SDD ya arrancó, el artifact store quedó en engram por error: re-corré `sdd-init` eligiendo `openspec` (doctrina del equipo) para que los artefactos viajen en los PRs.
 
 Cerrá con un veredicto de una línea: "listo para trabajar" o "arreglá X antes de seguir".
