@@ -45,7 +45,7 @@ bash scripts/release/rollback-to.sh $ARGUMENTS <tag-elegido>
 ```
 
 - Exit 0 → el script ya verificó health y muestra el build SHA corriendo.
-- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker [-c $DOCKER_CONTEXT] stack ps <stack>`.
+- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker stack ps <stack>` (agregando `-c $DOCKER_CONTEXT` si es production).
 
 ## Volver a la última versión
 

@@ -1,0 +1,13 @@
+# forja-monitor.timer — fires the monitor every 15 minutes (ops/10).
+# Install: see the 4-step header of ops/monitor.sh.
+[Unit]
+Description=Run forja node monitor every 15 minutes
+
+[Timer]
+# First run 2 minutes after boot, then at :00/:15/:30/:45 of every hour.
+OnBootSec=2min
+OnCalendar=*-*-* *:00/15:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

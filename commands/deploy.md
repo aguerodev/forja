@@ -67,7 +67,7 @@ Encadena: build → secrets (assert) → **pg_dump validado que aborta si falla*
 ### Fase 2 — Off-site, verificación y registro (solo con deploy OK)
 
 ```bash
-bash scripts/release/offsite-backup.sh   # dump al Storage Box vía el nodo (WARN si falta backup.env)
+bash scripts/release/offsite-backup.sh   # dump off-site vía el sidecar de backup (RUN_ONCE=1; WARN si el sidecar o sus secrets faltan)
 bash scripts/release/verify.sh           # SHA desplegado == HEAD + smoke
 bash scripts/release/tag-release.sh      # tag git vX.Y.Z (registro, NO trigger; idempotente)
 ```

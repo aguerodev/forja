@@ -1,0 +1,14 @@
+# forja-monitor.service — one monitoring pass (ops/10).
+# Activated by forja-monitor.timer; not meant to be enabled directly.
+# Install: see the 4-step header of ops/monitor.sh.
+[Unit]
+Description=forja node monitor (disk/inodes/memory thresholds -> webhook)
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+# Webhook URL + optional MONITOR_WARN/MONITOR_CRIT overrides. The leading
+# '-' tolerates a missing file (the script then warns it is log-only).
+EnvironmentFile=-/etc/forja-monitor.env
+ExecStart=/usr/local/bin/forja-monitor.sh
