@@ -25,7 +25,8 @@ echo "== pnpm (HARD) =="; pnpm -v || corepack enable pnpm || echo "PREFLIGHT_FAI
 echo "== gh (HARD si va a crear repo en GitHub) =="; gh --version && gh auth status || echo "PREFLIGHT_WARN gh"
 echo "== docker (WARN) =="; docker version --format '{{.Server.Version}}' || echo "PREFLIGHT_WARN docker"
 echo "== gentle-ai (WARN) =="; command -v gentle-ai || echo "PREFLIGHT_WARN gentle-ai"
-echo "== engram (WARN) =="; claude mcp list 2>/dev/null | grep -qi engram && echo "engram OK" || echo "PREFLIGHT_WARN engram"
+echo "== engram MCP (WARN) =="; claude mcp list 2>/dev/null | grep -qi engram && echo "engram MCP OK" || echo "PREFLIGHT_WARN engram-mcp"
+echo "== engram CLI (WARN) =="; command -v engram || echo "PREFLIGHT_WARN engram-cli"
 ```
 
 Interpretación:
@@ -34,7 +35,8 @@ Interpretación:
 - `gh` → duro SOLO si el usuario quiere crear el repo en GitHub desde acá; si no, WARN + dejá los pasos manuales al final. Ojo: si `gh auth status` muestra **dos cuentas**, verificá que la activa sea la correcta para la org destino — avisá si no lo es.
 - `docker` → WARN: hace falta para testcontainers y para `/forja:deploy preview`.
 - `gentle-ai` → WARN: "instalá gentle-ai antes de `/sdd-init`".
-- `engram` → WARN: memoria persistente del agente; sin eso el proceso funciona pero pierde continuidad.
+- `engram` MCP → WARN: memoria persistente del agente; sin eso el proceso funciona pero pierde continuidad.
+- `engram` CLI → WARN: sin el binario no hay **memoria de equipo** (git sync) — el MCP y el CLI son piezas distintas; el template ya deja `.engram/config.json` listo para cuando esté.
 
 ## Paso 2 — Preguntas
 
@@ -97,3 +99,4 @@ Mostrá un resumen de lo creado y los próximos pasos:
 3. Corré **`/sdd-init`** de gentle-ai (artifact store: `openspec`) para activar el flujo SDD.
 4. Infra cuando toque: carpeta `ops/` + el wrapper `hcloud-agent.sh` del plugin (`/forja:doctor` muestra su ruta exacta) + skill `forja:doctrina`, receta `operar-servidor`.
 5. Primer deploy: **`/forja:deploy preview`**.
+6. **Memoria de equipo**: al cerrar cada unidad de trabajo, `engram sync` + commitear `.engram/` junto con el código; al arrancar sesión el hook importa solo. El detalle vive en el CLAUDE.md del proyecto («Memoria de equipo (engram)»).

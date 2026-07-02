@@ -2,3 +2,6 @@
 .atl/
 wiki/.obsidian/
 node_modules/
+
+# engram team memory: chunks + manifest ARE committed; the local DB is not
+.engram/engram.db*

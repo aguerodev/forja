@@ -373,6 +373,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | mapeo Schema.parse como único cruce row->contrato | `arq.convenciones` |
 | marcas [SUPUESTO] / [PENDIENTE] / [DECISIÓN ABIERTA] | `proc.requerimientos` |
 | matriz autonomo/human-confirmed/prohibido de operaciones de infra | `ops.gestion-infra` |
+| memoria de equipo (engram git sync: chunks versionados en .engram/, import al abrir sesión, sync + commit al cerrar la unidad de trabajo) | `proc.sdd` |
 | métrica vs gate (coverage-v8 y mutation score son métricas informativas; el gate de merge lo dan tsc/biome/dependency-cruiser/vitest/audit) | `arq.testing` |
 | migración como replicated-job declarado en stack.yml (lo lanza el propio docker stack deploy; deploy.sh la gatea con polling del estado de la task) | `ops.pipeline-cicd` |
 | mocks felices mienten (antipatrón) | `arq.testing` |

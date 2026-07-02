@@ -1,7 +1,7 @@
 {
   "name": "forja",
   "displayName": "Forja",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Doctrina de ingeniería + bootstrap enterprise-grade: wiki, skills, comandos de operador y guardias Gitflow para desarrollar con gentle-ai + engram",
   "author": {
     "name": "aguerodev"

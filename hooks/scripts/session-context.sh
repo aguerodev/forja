@@ -35,6 +35,22 @@ if [ ! -f "${ROOT}/.forja.json" ]; then
   exit 0
 fi
 
+# Team memory: import chunks committed by teammates. Local-only operation
+# (no network) and strictly fail-soft: any failure leaves the session as-is.
+ENGRAM_NOTE=""
+if [ -f "${ROOT}/.engram/manifest.json" ]; then
+  if command -v engram >/dev/null 2>&1; then
+    IMPORT_OUT="$( (cd "${ROOT}" && engram sync --import) 2>/dev/null )" || IMPORT_OUT=""
+    case "${IMPORT_OUT}" in
+      "") ENGRAM_NOTE="" ;;
+      *"No new chunks"*) ENGRAM_NOTE="Memoria de equipo (engram): al día." ;;
+      *) ENGRAM_NOTE="Memoria de equipo (engram): chunks nuevos importados." ;;
+    esac
+  else
+    ENGRAM_NOTE="Hay memoria de equipo en .engram/ pero falta el CLI de engram — instalalo para importar/exportar."
+  fi
+fi
+
 # Tooling check for the context message.
 MISSING=""
 for t in gentle-ai gh docker hcloud; do
@@ -47,6 +63,7 @@ node -e '
   try {
     const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
     const missing = process.argv[2] || "";
+    const engramNote = process.argv[3] || "";
     const root = process.env.CLAUDE_PLUGIN_ROOT || "";
     const wrapper = root
       ? root + "/bin/hcloud-agent.sh"
@@ -57,6 +74,7 @@ node -e '
       "Gitflow: main/develop solo por PR — guardia activa. " +
       "Deploy SOLO con /forja:deploy; estado del equipo con /forja:status. " +
       "Infra Hetzner: usá " + wrapper + " — nunca hcloud crudo.";
+    if (engramNote) msg += " " + engramNote;
     if (missing) msg += " Faltan herramientas: " + missing + " — corré /forja:doctor.";
     if (msg.length > 700) msg = msg.slice(0, 700);
     process.stdout.write(JSON.stringify({
@@ -65,6 +83,6 @@ node -e '
   } catch {
     process.stdout.write("{}\n");
   }
-' "${ROOT}/.forja.json" "${MISSING}" 2>/dev/null || printf '{}\n'
+' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" 2>/dev/null || printf '{}\n'
 
 exit 0
