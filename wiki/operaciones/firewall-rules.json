@@ -1,0 +1,41 @@
+[
+  {
+    "direction": "in",
+    "protocol": "tcp",
+    "port": "22",
+    "source_ips": ["0.0.0.0/0"],
+    "destination_ips": [],
+    "description": "ssh-inbound-ipv4"
+  },
+  {
+    "direction": "in",
+    "protocol": "tcp",
+    "port": "22",
+    "source_ips": ["::/0"],
+    "destination_ips": [],
+    "description": "ssh-inbound-ipv6"
+  },
+  {
+    "direction": "out",
+    "protocol": "tcp",
+    "port": "1-65535",
+    "source_ips": [],
+    "destination_ips": ["0.0.0.0/0", "::/0"],
+    "description": "egress-tcp-all"
+  },
+  {
+    "direction": "out",
+    "protocol": "udp",
+    "port": "1-65535",
+    "source_ips": [],
+    "destination_ips": ["0.0.0.0/0", "::/0"],
+    "description": "egress-udp-all"
+  },
+  {
+    "direction": "out",
+    "protocol": "icmp",
+    "source_ips": [],
+    "destination_ips": ["0.0.0.0/0", "::/0"],
+    "description": "egress-icmp"
+  }
+]

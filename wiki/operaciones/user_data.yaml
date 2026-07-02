@@ -1,0 +1,84 @@
+#cloud-config
+#
+# user_data.yaml — Bootstrap del PRIMER BOOT (Fase 0/1 del protocolo §2).
+#
+# FUENTE DE VERDAD del estado del nodo en su primer arranque. Se adjunta al crear
+# el server (campo "user data" / cloud-init). Corre ANTES de que SSH abra al
+# mundo, por eso es donde se cierra la ventana de exposicion del provisioning:
+# es la expresion real de "cattle, no pet" y de "guardarrailes ejecutables".
+#
+# Que hace, y POR QUE aqui y no en provision.sh:
+#   - Crea el usuario operativo (placeholder ${DEPLOY_USER}=deploy) con su pubkey.
+#   - Le da sudo NOPASSWD (admin del HOST; el pipeline NO usa sudo, corre por
+#     grupo docker). Resuelve la contradiccion historica 03/04 sobre el baseline.
+#   - Aplica hardening SSH BASE (root cerrado, password cerrado) en el primer boot,
+#     no a mitad de una sesion manual: nadie se autobloquea porque aun no hay
+#     sesion que perder.
+#
+# Complementa (no reemplaza) la Fase 0 de la consola/API del proveedor:
+#   - Cloud Firewall de borde inbound deny-all salvo 22/tcp (v4 Y v6, reglas
+#     separadas), egress permitido. Capa-1 no saltable por `docker run -p`.
+#   - Server creado con SSH key adjunta y SIN password de root.
+#   - Backups del proveedor (toggle, +20%): COMPLEMENTO de restic, baja el RTO
+#     (rebuild-from-image) y cubre pgdata + raft del Swarm. Decision del dueno.
+#
+# Despues de este boot: sembrar known_hosts con las host keys que cloud-init
+# imprime, conectar como ${DEPLOY_USER} y correr provision.sh. Ver docs 03 y 04.
+
+# ──────────────────────────────────────────────────────────────────────────
+# Usuario operativo
+# ──────────────────────────────────────────────────────────────────────────
+users:
+  - name: deploy                       # placeholder ${DEPLOY_USER}
+    gecos: ""
+    shell: /bin/bash
+    groups: [sudo]                     # admin del host; el grupo 'docker' lo suma provision.sh
+    lock_passwd: true                  # cuenta sin password: solo entra por clave SSH (estado L)
+    sudo: "ALL=(ALL) NOPASSWD:ALL"     # NOPASSWD = admin del HOST, NO el pipeline (ese corre sin sudo)
+    ssh_authorized_keys:
+      # CLAVE DEL OPERADOR HUMANO — CON passphrase, usada via ssh-agent.
+      # Es root-equivalente (sudo NOPASSWD + grupo docker) y el UNICO factor:
+      # sin passphrase, laptop robado = root instantaneo en prod. La passphrase
+      # se desbloquea una vez por sesion en el agente, no en cada login.
+      - "ssh-ed25519 AAAA...REEMPLAZAR_POR_PUBKEY_DEL_OPERADOR... operador@${APP}"
+      # CLAVE DE CI/DEPLOY AUTOMATICO — SIN passphrase interactiva (un job no puede
+      # teclearla), protegida como SECRET del repositorio (GitHub Actions secret),
+      # NUNCA en disco del laptop. Es una clave distinta de la del operador: no se
+      # confunden ni se comparten. Rotar revoca solo el canal automatico.
+      # Opcional: omitir esta linea si el deploy entra por otro canal (ej. tunel).
+      - "ssh-ed25519 AAAA...REEMPLAZAR_POR_PUBKEY_DE_CI... ci-deploy@${APP}"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Hardening SSH base — escrito ANTES de que SSH quede expuesto.
+# Nombre 00- para GANAR la precedencia alfanumerica sobre 50-cloud-init.conf
+# (por orden gana el PRIMER valor; un 99- perderia y dejaria password auth abierto).
+# provision.sh reescribe/refuerza este mismo drop-in (AllowUsers, MaxAuthTries...).
+# ──────────────────────────────────────────────────────────────────────────
+write_files:
+  - path: /etc/ssh/sshd_config.d/00-hardening.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      # Hardening SSH base aplicado por cloud-init en el primer boot.
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+      AllowUsers deploy
+      MaxAuthTries 3
+      LoginGraceTime 20
+
+# ──────────────────────────────────────────────────────────────────────────
+# Neutralizar el drop-in que cloud-init suele dejar reabriendo password auth,
+# y recargar sshd para que el hardening base quede EFECTIVO en este boot.
+# ──────────────────────────────────────────────────────────────────────────
+runcmd:
+  # Si cloud-init dejo 50-cloud-init.conf con PasswordAuthentication yes, neutralizarlo.
+  - "[ -f /etc/ssh/sshd_config.d/50-cloud-init.conf ] && sed -i 's/^[[:space:]]*PasswordAuthentication.*/PasswordAuthentication no/I' /etc/ssh/sshd_config.d/50-cloud-init.conf || true"
+  # Validar sintaxis y recargar (config efectiva se re-verifica con sshd -T en provision/verify).
+  - "sshd -t && systemctl reload ssh"
+
+# Sin password de root tampoco a nivel cloud-init (el server se crea sin password
+# de root; esto es defensa redundante, barata).
+ssh_pwauth: false
+disable_root: true
