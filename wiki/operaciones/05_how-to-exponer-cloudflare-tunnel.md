@@ -76,13 +76,13 @@ El registro DNS que apunta el hostname al túnel se crea `proxied: true` (“nub
 
 ### Por qué una etiqueta única con guion y no un subdominio multinivel
 
-El entorno de prueba usa `dev-${APP}.<dominio>` —una etiqueta, con **guion**— y no `dev.${APP}.<dominio>` —dos niveles, con **punto**—, por costo. El Universal SSL gratuito de Cloudflare cubre el dominio raíz y **un nivel** de subdominio (`*.<dominio>`). `dev-${APP}` es una etiqueta bajo la raíz y cae dentro de ese comodín sin costo. `dev.${APP}.<dominio>` es subdominio de segundo nivel: el comodín no lo abarca, y cubrirlo con TLS exigiría un Advanced Certificate, con costo extra. (El prefijo literal `dev-` es convención; parametrízalo para tu caso.)
+El entorno de prueba usa `<dev>-${APP}.<dominio>` —una etiqueta, con **guion**— y no `<dev>.${APP}.<dominio>` —dos niveles, con **punto**—, por costo. El Universal SSL gratuito de Cloudflare cubre el dominio raíz y **un nivel** de subdominio (`*.<dominio>`). `<dev>-${APP}` es una etiqueta bajo la raíz y cae dentro de ese comodín sin costo. `<dev>.${APP}.<dominio>` es subdominio de segundo nivel: el comodín no lo abarca, y cubrirlo con TLS exigiría un Advanced Certificate, con costo extra. Esto vale para cualquier valor del label per-developer (`aguerodev-app`, `maria-app`, o el fallback `dev-app`): mientras sea UNA etiqueta con guiones, el comodín gratuito la cubre.
 
 > En la zona, usa el modo SSL **Full** para que el TLS de extremo Cloudflare↔origen quede coherente con el túnel.
 
-### Por qué un túnel por entorno
+### Por qué un túnel por entorno (y por developer en test)
 
-`prod` y `test` no comparten túnel: cada uno tiene el suyo, con su token, su ingress y su CNAME. Aunque corran en lugares distintos —`prod` en el servidor y `test` en el Swarm local de la máquina de desarrollo— quedan **aislados**: un cambio, una rotación de token o un problema en uno no arrastra al otro, y cada entorno expone solo su hostname. Costo: duplicar el aprovisionamiento. Ganancia: que no se pisan.
+`prod` y `test` no comparten túnel: cada uno tiene el suyo, con su token, su ingress y su CNAME. Aunque corran en lugares distintos —`prod` en el servidor y `test` en el Swarm local de la máquina de desarrollo— quedan **aislados**: un cambio, una rotación de token o un problema en uno no arrastra al otro, y cada entorno expone solo su hostname. Y en `test` el aislamiento baja un nivel más: **cada developer tiene su propio túnel** (`${APP}-test-<dev>`) apuntando a su Swarm local, con su token en su `secrets/test.env`; dos devs desplegando preview a la vez no colisionan en Cloudflare ni comparten credenciales. Costo: un aprovisionamiento por entorno y por developer. Ganancia: que nadie se pisa.
 
 ### Estados del túnel y errores esperables
 
@@ -173,14 +173,14 @@ Define el entorno y deriva de él el hostname público y el nombre del túnel:
 ```bash
 source ~/.cf_provision.env
 APP="app"; ENV="prod"   # prod | test
+DEV_LABEL="$(git config --get forja.devUser 2>/dev/null | tr '[:upper:]' '[:lower:]')"
 case "$ENV" in
-  prod) PUBLIC_HOST="${APP}.${BASE_DOMAIN}" ;;
-  test) PUBLIC_HOST="dev-${APP}.${BASE_DOMAIN}" ;;
+  prod) PUBLIC_HOST="${APP}.${BASE_DOMAIN}"; TUNNEL_NAME="${APP}-prod" ;;
+  test) PUBLIC_HOST="${DEV_LABEL:-dev}-${APP}.${BASE_DOMAIN}"; TUNNEL_NAME="${APP}-test-${DEV_LABEL:-dev}" ;;
 esac
-TUNNEL_NAME="${APP}-${ENV}"
 ```
 
-La convención de hostnames deriva del nombre de la app: `prod` → `${APP}.${BASE_DOMAIN}`, `test` → `dev-${APP}.${BASE_DOMAIN}`. El entorno de prueba usa la etiqueta única `dev-${APP}` (con guion, no punto) a propósito; el porqué está en la [Norma](#por-qué-una-etiqueta-única-con-guion-y-no-un-subdominio-multinivel).
+La convención de hostnames deriva del nombre de la app: `prod` → `${APP}.${BASE_DOMAIN}`, `test` → `<dev>-${APP}.${BASE_DOMAIN}` **por developer**: el label `<dev>` sale de `git config forja.devUser` (lo setea `/forja:init` con el usuario de GitHub; `dev` es el fallback para un solo developer). Cada developer corre su propio Swarm local, así que cada uno aprovisiona **su** túnel (`${APP}-test-<dev>`) con **su** hostname y guarda **su** token en su `secrets/test.env` local — dos devs desplegando preview no se pisan ni comparten credenciales. La etiqueta sigue siendo única con guion (no punto) a propósito; el porqué está en la [Norma](#por-qué-una-etiqueta-única-con-guion-y-no-un-subdominio-multinivel).
 
 ### Paso 3 — Crear el túnel
 

@@ -124,7 +124,13 @@ env_ctx() {
     preview|test)
       ENV_NAME="preview"
       STACK="${APP}_test"
-      PUBLIC_HOST="dev-${PUBLIC_NAME}.${DOMAIN}"
+      # Per-developer preview host: <dev>-<publicName>.<domain>. The label
+      # comes from `git config forja.devUser` (set by /forja:init from the
+      # gh login); "dev" is the single-developer fallback. Each dev runs
+      # their own local Swarm + tunnel, so hostnames must not collide.
+      _dev_label="$(git config --get forja.devUser 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+      PUBLIC_HOST="${_dev_label:-dev}-${PUBLIC_NAME}.${DOMAIN}"
+      unset _dev_label
       TAG_PREFIX="test"
       # Deliberate: a context inherited from the caller must never send a
       # test deploy to the production node. Local engine, always.
