@@ -46,7 +46,7 @@ Mismo principio en dos niveles: arriba, un orquestador delgado conduce y delega;
 
 ## La memoria persistente necesita anclas estables
 
-La memoria persistente del flujo registra decisiones y bugs entre sesiones; las convenciones del proyecto, la wiki y los errores de dominio explícitos (la jerarquía bajo `DomainError`) son sus puntos de anclaje. Menos decisiones abiertas significan menos deriva que la memoria deba reconciliar: la convención reduce lo que hay que recordar.
+La memoria persistente del flujo registra decisiones y bugs entre sesiones; las convenciones del proyecto, la wiki y los errores de dominio explícitos (la jerarquía bajo `DomainError`) son sus puntos de anclaje. Menos decisiones abiertas significan menos deriva que la memoria deba reconciliar: la convención reduce lo que hay que recordar. Y la memoria misma se comparte como un artefacto más del repo: los chunks de engram (`.engram/`) viajan por git, de modo que lo que un developer aprende queda disponible para los agentes de todo el equipo (el mecanismo está en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md)).
 
 ## Las reglas operativas del agente derivan de esta wiki
 

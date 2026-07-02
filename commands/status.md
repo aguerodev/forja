@@ -30,11 +30,18 @@ gh pr list --state open 2>/dev/null || echo "sin gh o sin remota GitHub - paso s
 
 5. **Backlog pendiente** — si existe `software_requirements/00-handoff.md`, extraé los ítems del backlog de cambios candidatos que todavía no tienen rama ni cambio SDD.
 
+6. **Memoria de equipo** — SOLO si existe `.engram/manifest.json` (sin ese archivo el comando igual sale 0 y muestra números del store personal del dev, no del equipo):
+
+```bash
+[ -f .engram/manifest.json ] && command -v engram >/dev/null && engram sync --status || echo "sin memoria de equipo en este repo - paso salteado"
+```
+
 ## Qué sintetizar (en este orden)
 
 - **Quién está en qué slice**: rama activa → autor → antigüedad del último commit.
 - **PRs abiertos**: cuáles esperan review, cuáles están estancados.
 - **Cambios SDD en curso**: qué carpetas de `openspec/changes/` están vivas y en qué fase.
 - **Slices libres**: qué ítems del backlog no tienen a nadie encima — eso es lo que se puede agarrar sin pisar a otro.
+- **Memoria de equipo**: `Pending import > 0` → hay conocimiento del equipo sin importar (el hook lo hace al abrir sesión). OJO: el status cuenta chunks, NO observaciones — las memorias guardadas y nunca exportadas son invisibles acá; el único momento que garantiza el export es el cierre de la unidad de trabajo (`engram sync` + commit de `.engram/`).
 
 Cerrá con una recomendación concreta: "si vas a arrancar algo, X e Y están libres; Z ya lo tiene <autor>".
