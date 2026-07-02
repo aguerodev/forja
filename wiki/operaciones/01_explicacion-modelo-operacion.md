@@ -62,7 +62,7 @@ Una pieza por función. Cada fila es la elección única para su área.
 | Ingreso | Cloudflare Tunnel (`cloudflared`), remotely-managed por token | Entrada sin puertos abiertos; TLS lo termina el borde de Cloudflare |
 | DNS / WAF / CDN | Cloudflare (zona `${APP}.<dominio>`) | CNAME al túnel; WAF y cache en el borde |
 | Registro de imágenes | — (build-on-node vía docker context; sin registry) | Con un solo nodo, la imagen se construye donde corre. GHCR entra por el dial si el build deja de ocurrir en la máquina que despliega |
-| CI | GitHub Actions (solo gates) | Verificación en PR (check/integration/contract/migrations); el ship es el comando `/deploy` |
+| CI | GitHub Actions (solo gates) | Verificación en PR (check/integration/contract/migrations); el ship es el comando `/forja:deploy` |
 | Backups retenidos | sidecar `backup` del stack -> Storage Box (SFTP) | Dump diario validado, retención 7 local y off-site; restic es dial ([Backups](./09_how-to-backups.md)) |
 | Backup pre-migración | `pg_dump -Fc` validado, local + Storage Box | Punto de restore inmediato en cada deploy a prod |
 | Hardening | SSH key-only, firewall, fail2ban | Superficie de ataque mínima |
@@ -245,7 +245,7 @@ Cloudflare va en **Full**; la app habla HTTP plano con `cloudflared` por dentro.
 El stack de **producción** son **tres servicios** (`app`, `db`, `cloudflared`) desplegados
 por `docker stack deploy`, con la imagen **construida en el propio nodo destino** vía el
 docker context del entorno, sin registry intermedio. El ship lo conduce el comando
-`/deploy` desde la máquina del operador (ver [Release por comando](./08_how-to-pipeline-cicd.md)).
+`/forja:deploy` desde la máquina del operador (ver [Release por comando](./08_how-to-pipeline-cicd.md)).
 
 Cada Swarm del proyecto tiene un solo nodo. Un registry resuelve distribuir la misma imagen
 a varios nodos; con un único nodo la imagen construida es exactamente la que ese nodo corre,

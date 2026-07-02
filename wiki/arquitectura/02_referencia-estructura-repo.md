@@ -58,14 +58,14 @@ El servidor (`next start`) sirve `src/app/`, pero ninguna feature pone su lógic
 │   │   ├── auth/                      # Better Auth: sesiones en Postgres, email/password + OAuth; deriva el Actor server-side
 │   │   │   ├── config.ts             # server-only: instancia Better Auth (cookie HttpOnly+Secure+SameSite=Lax, rotación)
 │   │   │   └── actor.ts              # server-only: getActor() desde la sesión verificada (nunca de body/headers/params)
-│   │   ├── openapi.ts                # OpenApiRegistry + generador del documento OpenAPI 3.1
 │   │   ├── db/
 │   │   │   ├── client.ts             # server-only: Pool (pg) + drizzle(); getDb()
 │   │   │   └── migrations/           # salida versionada de drizzle-kit
 │   │   ├── http/
 │   │   │   ├── errors.ts             # DomainError → Response: ÚNICA traducción HTTP
 │   │   │   ├── actor.ts              # actorFromRequest(): extrae el Actor del request
-│   │   │   └── client.ts             # server-only: puerto HttpClient compartido (borde de EGRESO): `timeout` como parámetro REQUERIDO de la firma (tsc rompe si falta) + hook de validación host/IP anti-SSRF
+│   │   │   ├── client.ts             # server-only: puerto HttpClient compartido (borde de EGRESO): `timeout` como parámetro REQUERIDO de la firma (tsc rompe si falta) + hook de validación host/IP anti-SSRF
+│   │   │   └── openapi.ts            # OpenApiRegistry + generador del documento OpenAPI 3.1
 │   │   └── observability/
 │   │       ├── logger.ts             # pino
 │   │       └── sentry.ts             # @sentry/nextjs

@@ -208,7 +208,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | build-on-node sin registry | `ops.modelo-operacion` |
 | cache de Cloudflare por URL fingerprinteada | `ops.exponer-tunnel` |
 | caching escalado por niveles (entrada del dial: Next Data Cache entre requests -> Redis como puerto compartido entre instancias) | `fund.principios` |
-| cadena de artefactos docs_sdd/ -> claude_design/ -> openspec/ | `proc.sdd` |
+| cadena de artefactos software_requirements/ -> claude_design/ -> openspec/ | `proc.sdd` |
 | canal seguro para comunicar la contraseña temporal | `ops.resetear-password` |
 | capas del release: comando delgado sobre scripts deterministas; gates humanos sin scriptear | `ops.pipeline-cicd` |
 | carpeta secrets/ como convención de ubicación (y secrets/<env>.env en .gitignore) | `arq.estructura-repo` |
@@ -228,6 +228,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | colisiones acotadas por slice (una feature = una carpeta = un agente; Gitflow pone la cadencia encima) | `proc.trabajo-ia` |
 | columna version en entidad mutable (dial: entra con la escritura concurrente real, no por default) | `arq.convenciones` |
 | comandos de verificación del stack (stack ls / stack services / secret ls) | `ops.desplegar-swarm` |
+| comandos del operador en el plugin forja (deploy y rollback; scripts deterministas en el proyecto) | `ops.pipeline-cicd` |
 | composition root formal y Unidad de Trabajo withTransaction(fn) — entrada del dial | `arq.hexagonal` |
 | concerns transversales con I/O como puerto (feature flags/audit/i18n/cache de lectura; default seguro; FeatureDisabledError) | `arq.convenciones` |
 | concurrency (cancel-in-progress true para check; los deploys no se serializan en CI porque el ship es manual y humano) | `ops.pipeline-cicd` |
@@ -244,7 +245,6 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | convención de nombre ${STACK}_<clave en minúscula> | `ops.secretos` |
 | convención sobre configuración (la convención vive en una herramienta, no en prosa) | `fund.principios` |
 | cookie de sesión HttpOnly + Secure + SameSite=Lax | `arq.auth` |
-| copias portables de los comandos (operaciones/comandos/, idénticas por gate de diff) | `ops.pipeline-cicd` |
 | cuatro caminos del borde (lectura vía Server Component, mutación vía actions.ts, API externa vía route.ts, egreso a terceros vía adapter) | `arq.hexagonal` |
 | cuatro tipos de pregunta E/A/Q/X (exploratoria, aclaratoria, de calidad, de contradicción) | `proc.requerimientos` |
 | daemon.json de rotación de logs escrito antes de levantar servicios (json-file max-size/max-file) | `ops.aprovisionar` |
@@ -261,7 +261,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | disparador (síntoma que justifica el salto, nunca una fecha) | `fund.principios` |
 | distinción APP vs PUBLIC_NAME (APP = slug de stack/imagen; PUBLIC_NAME = label DNS público; un '_' en un hostname es inválido) | `ops.entornos-imagen` |
 | doble de test (vocabulario de fakes/mocks) | `arq.testing` |
-| docker context de prod fijado en deploy.sh (myapp-prod); test neutraliza DOCKER_CONTEXT y usa el contexto local | `ops.entornos-imagen` |
+| docker context de prod fijado en deploy.sh (${APP}-prod); test neutraliza DOCKER_CONTEXT y usa el contexto local | `ops.entornos-imagen` |
 | Docker Engine | `ops.modelo-operacion` |
 | Docker pineado por versión (repo APT oficial + apt-mark hold; nunca curl\|sh a latest flotante) | `ops.aprovisionar` |
 | Docker secret (cifrado en el swarm, montado en /run/secrets, nunca env ni horneado en la imagen) | `ops.secretos` |
@@ -269,7 +269,6 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | docker swarm init | `ops.aprovisionar` |
 | Docker Swarm orquestador de nodo único | `ops.modelo-operacion` |
 | Dockerfile multi-stage (base / deps / builder / runner / migrator / backup) | `ops.entornos-imagen` |
-| docs_sdd/ | `proc.sdd` |
 | dogfooding / verificar antes que confiar | `arq.testing` |
 | dos claves SSH para deploy (operador con passphrase vía ssh-agent vs CI sin passphrase como secret del repo) | `ops.endurecer-acceso` |
 | dos entornos (dev = next dev contra localhost:3000; prod = stack en Swarm) | `ops.entornos-imagen` |
@@ -289,7 +288,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | el tag vX.Y.Z como registro del release, no como trigger; su cuerpo anotado ES el changelog generado (git log <prev>..HEAD; se lee con git tag -n99) | `ops.pipeline-cicd` |
 | el test antes que la implementacion (principio) | `fund.principios` |
 | el test rojo define qué es \"hecho\" | `proc.tdd` |
-| elección de docker context por entorno (prod vía context/alias SSH myapp-prod; test con DOCKER_CONTEXT neutralizado) | `ops.desplegar-swarm` |
+| elección de docker context por entorno (prod vía context/alias SSH ${APP}-prod; test con DOCKER_CONTEXT neutralizado) | `ops.desplegar-swarm` |
 | email/password + OAuth | `arq.auth` |
 | enable-protection delete/rebuild como candado a nivel API | `ops.gestion-infra` |
 | endurecimiento sysctl de la pila de red (CIS L1; después de Docker) | `ops.endurecer-acceso` |
@@ -312,7 +311,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | feature como módulo autocontenido por contexto de negocio | `arq.hexagonal` |
 | firewall de borde del proveedor (capa-1 deny-all salvo 22/tcp en v4 y v6 por separado; fuera del host, no saltable por docker -p) | `ops.aprovisionar` |
 | firewall declarativo replace-rules desde archivo versionado | `ops.gestion-infra` |
-| formatos de artefactos (SRS ISO/IEC/IEEE 29148, dbdocs, Mermaid classDiagram) | `proc.sdd` |
+| formatos de artefactos (catálogo de requisitos SRS ligero, dbdocs, Mermaid classDiagram) | `proc.sdd` |
 | FormState / useActionState | `arq.crear-feature` |
 | FOUC (flash of unstyled/wrong-theme content) | `arq.estilos-frontend` |
 | fronteras de fase | `proc.sdd` |
@@ -320,7 +319,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | garantía de privacidad (una operación con garantía no se rompe por un fallo de adaptador) | `arq.testing` |
 | gate de migraciones destructivas (linter con overrides, dentro de pnpm run check) | `arq.gates-tooling` |
 | gate de registro OpenAPI (registerPath obligatorio + documento sin colisiones) | `arq.gates-tooling` |
-| gate en el PR, ship por comando (/deploy) — el CI verifica, no despliega | `ops.pipeline-cicd` |
+| gate en el PR, ship por comando (/forja:deploy) — el CI verifica, no despliega | `ops.pipeline-cicd` |
 | gates de fase (revisión en fronteras, no en cada edición) | `proc.trabajo-ia` |
 | generación de clave ed25519 local (la clave privada nunca llega al servidor) | `ops.endurecer-acceso` |
 | generación local de migraciones | `arq.crear-feature` |
@@ -329,7 +328,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | getActor / requireActor / UnauthenticatedError | `arq.auth` |
 | getConfig + SECRETS_DIR | `arq.convenciones` |
 | GHCR como registry de imagen (entrada del dial: el build deja de ocurrir en la máquina que despliega) | `ops.modelo-operacion` |
-| Gitflow multi-agente (main producción, develop integración, features cortas; solo main despliega vía /deploy) | `proc.trabajo-ia` |
+| Gitflow multi-agente (main producción, develop integración, features cortas; solo main despliega vía /forja:deploy) | `proc.trabajo-ia` |
 | glosario maestro (índice alfabético de términos con enlace a la fuente canónica) | `fund.glosario` |
 | golden snapshot del base endurecido (atajo de RTO: rebuild desde imagen en minutos; no respalda datos) | `ops.aprovisionar` |
 | gotchas de acceso al Storage Box (se prueba desde el nodo; DNS sin propagar) | `ops.backups` |
@@ -348,7 +347,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | inmutabilidad del secret (docker secret rm + recreate para rotar) | `ops.secretos` |
 | instalación manual de la clave pública (no ssh-copy-id; authorized_keys 600; install -d -m 700) | `ops.endurecer-acceso` |
 | interactividad progresiva / islas cliente en el layout | `arq.estilos-frontend` |
-| interfaz de operación por entorno (/deploy preview\|production y /rollback preview\|production; preview = swarm local) | `ops.pipeline-cicd` |
+| interfaz de operación por entorno (/forja:deploy preview\|production y /forja:rollback preview\|production; preview = swarm local) | `ops.pipeline-cicd` |
 | inventario consolidado de controles de seguridad operativa (el doc como checklist de referencia) | `ops.seguridad-operativa` |
 | inversión del modelo (acota quién puede ser deploy, no qué puede hacer deploy con Docker) | `ops.endurecer-acceso` |
 | IP derivada de la API (nunca cacheada) | `ops.gestion-infra` |
@@ -395,19 +394,19 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | opción de escape | `proc.requerimientos` |
 | OpenAPIRegistry / buildOpenApiDocument | `arq.gates-tooling` |
 | openspec/ | `proc.sdd` |
-| orden canónico de release (release/* -> main -> /deploy -> registro -> back-merge) | `ops.pipeline-cicd` |
+| orden canónico de release (release/* -> main -> /forja:deploy -> registro -> back-merge) | `ops.pipeline-cicd` |
 | orquestador delgado (nivel director que delega, distinto del nivel de trabajo) | `proc.trabajo-ia` |
 | over-engineering fuera del dial (tailwind.config.js, autoprefixer, tailwind-variants, Style Dictionary, next-themes, Turborepo/Nx) | `arq.estilos-frontend` |
 | panel de revisión 3x5 (tres rondas, cinco lentes) | `proc.requerimientos` |
 | paquete de tokens compartido multi-proyecto — entrada del dial | `arq.estilos-frontend` |
 | paridad dev-local prod-server vía docker context | `ops.modelo-operacion` |
-| Paso 0 - traer la wiki (primera acción obligatoria) | `proc.arrancar` |
+| Paso 0 - instalar el plugin forja y correr /forja:init (primera acción obligatoria) | `proc.arrancar` |
 | patrón de dashboard server-first (tabla + widgets + islas hoja bajo Suspense; URL como fuente de verdad del filtro) | `arq.estilos-frontend` |
 | patrón de nombre de stack ${APP}_<env> | `ops.entornos-imagen` |
 | patrón outbox transaccional (entrada del catálogo del dial: garantía at-least-once; obligatorio si un handler con inbox produce un efecto externo) | `fund.principios` |
 | pg.Client (conexión directa ad-hoc) | `ops.resetear-password` |
 | pirámide de tests (cinco capas dominio -> property-based -> integración -> contrato de API -> E2E) | `arq.testing` |
-| plantilla del ancla de entrada (wiki/CLAUDE.template.md -> CLAUDE.md raíz) | `proc.arrancar` |
+| plantilla del ancla (CLAUDE.md instanciado por /forja:init desde la plantilla del plugin) | `proc.arrancar` |
 | pnpm run check | `arq.gates-tooling` |
 | pnpm run fix | `arq.gates-tooling` |
 | política anti-SSRF del HttpClient (pinning de IP, redirects, rangos privados) | `arq.convenciones` |
@@ -425,7 +424,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | procedimiento break-glass de reseteo de contraseña | `ops.resetear-password` |
 | procedimiento de rotación | `ops.secretos` |
 | processed_events (inbox de idempotencia de webhooks; PK compuesta proveedor/origen + event_id; columna attempts para dead-letter) | `arq.estructura-repo` |
-| protección de ramas según plan (free: convención + preflight de /deploy como candado real; Team: branch protection como dial) | `arq.gates-tooling` |
+| protección de ramas según plan (free: convención + preflight de /forja:deploy como candado real; Team: branch protection como dial) | `arq.gates-tooling` |
 | provisión vía API de Cloudflare | `ops.exponer-tunnel` |
 | public.ts como única superficie pública cross-feature | `arq.hexagonal` |
 | puente de tipos compile-time dominio<->schema (aserción z.input en schemas.ts que no compila si el schema deja de cubrir la entidad) | `arq.testing` |
@@ -445,7 +444,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | regla de un solo conector (bajar el entorno de test del servidor antes de levantarlo en local) | `ops.desplegar-swarm` |
 | regla un backup que nunca restauraste no es un backup | `ops.backups` |
 | reglas de commit (Conventional Commits tipo(scope): imperativo; un commit = unidad de trabajo revisable; sin atribución de IA; commitlint es dial) | `proc.trabajo-ia` |
-| reglas operativas del agente (.claude/rules/, copia portable en wiki/rules/ con gate de diff) | `proc.trabajo-ia` |
+| reglas operativas del agente (wiki/rules/ dentro del plugin forja, impuestas por hooks del plugin) | `proc.trabajo-ia` |
 | render dinámico (dynamic = force-dynamic), cache() de React, archivos de segmento (loading/error/not-found), streaming por Suspense vs SSE (dial) | `arq.estilos-frontend` |
 | reproducibilidad de punta a punta (principio) | `fund.principios` |
 | requirePermission | `arq.convenciones` |
@@ -454,7 +453,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | resumen normativo de auth | `arq.auth` |
 | reutilización del hasher Argon2id en el break-glass | `ops.resetear-password` |
 | revocación inmediata vía Postgres store | `arq.auth` |
-| roadmap derivado (requisitos de docs_sdd sin realizar + changes activos de openspec; nunca una lista aparte; el tablero de intake es dial) | `proc.sdd` |
+| roadmap derivado (requisitos de software_requirements sin realizar + changes activos de openspec; nunca una lista aparte; el tablero de intake es dial) | `proc.sdd` |
 | robusto no es máximo (principio) | `fund.principios` |
 | rollback en dos planos (software: service rollback barato y automático-ofrecible; datos: pg_restore destructivo, human-confirmed) | `ops.pipeline-cicd` |
 | rollback multi-versión (tags post-health, descripción por commit, regreso con latest) | `ops.pipeline-cicd` |
@@ -484,6 +483,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | smoke de contrato en PR (Schemathesis, 25 ejemplos; la pasada exhaustiva es dial) | `arq.gates-tooling` |
 | snapshot pre-cambio como precondicion | `ops.gestion-infra` |
 | Socket / análisis de supply-chain como entrada del dial | `fund.stack` |
+| software_requirements/ | `proc.sdd` |
 | spec-doc-interviewer | `proc.sdd` |
 | Spec-Driven Development (SDD) | `proc.sdd` |
 | src/ (raíz del código importable), src/app/ (cableado fino al framework), src/core/, src/features/, src/shared/, tests/, e2e/ | `arq.estructura-repo` |

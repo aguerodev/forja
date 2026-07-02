@@ -28,7 +28,7 @@ related: []
 
 Cómo un **agente de IA** gestiona el ciclo de vida del servidor de producción a través de la API de Hetzner (`hcloud`): confirmar-o-crear el nodo idempotentemente, recuperar su IP desde la API, aplicar el Cloud Firewall declarativamente y operar el plano de snapshots del proveedor. Este documento es el **hogar de esa capacidad**; otros docs la referencian pero la doctrina vive acá.
 
-Asume el modelo de un solo nodo descrito en [modelo de operación](./01_explicacion-modelo-operacion.md) y se apoya en los artefactos ejecutables que acompañan a este doc: el wrapper `hcloud-agent.sh`, el gate `infra-verify.sh` y el ruleset `firewall-rules.json`, todos hermanos de `provision.sh`/`verify.sh` en `operaciones/`.
+Asume el modelo de un solo nodo descrito en [modelo de operación](./01_explicacion-modelo-operacion.md) y se apoya en artefactos ejecutables que viven en dos lugares: el wrapper `hcloud-agent.sh`, el validador `validate-firewall-rules.sh` y el gate `infra-verify.sh` viven en el `bin/` del plugin forja (quedan en el PATH de la sesión); el ruleset `firewall-rules.json` vive en `ops/` del repo del proyecto — su historial de git es la bitácora de auditoría.
 
 ---
 
@@ -59,7 +59,7 @@ Recrear es destruir. Destruir está fuera del toolset del agente (ver matriz). P
 
 ### Firewall declarativo por API: replace-rules + diff-gate
 
-El ruleset del Cloud Firewall vive versionado en `operaciones/firewall-rules.json`: **deny-all inbound** salvo `22/tcp`, con la regla declarada por separado para **IPv4 y IPv6** (son reglas distintas), y egress permitido. El borde real de la app lo sigue cubriendo Cloudflare delante del túnel — este firewall es la defensa de plano de red del nodo, no el WAF (ver [seguridad operativa](./10_referencia-seguridad-operativa.md)).
+El ruleset del Cloud Firewall vive versionado en `ops/firewall-rules.json` del repo del proyecto: **deny-all inbound** salvo `22/tcp`, con la regla declarada por separado para **IPv4 y IPv6** (son reglas distintas), y egress permitido. El borde real de la app lo sigue cubriendo Cloudflare delante del túnel — este firewall es la defensa de plano de red del nodo, no el WAF (ver [seguridad operativa](./10_referencia-seguridad-operativa.md)).
 
 El agente converge el firewall con **una sola operación atómica**, `replace-rules` desde el archivo, **nunca** con `add-rule` incremental. La razón es dura: `add-rule` acumula drift y abre puertos sin cerrar los viejos; `replace-rules` impone el archivo entero como verdad. Antes de aplicar, el agente lee el estado vivo (`firewall describe -o json`) y muestra el **diff vivo-vs-archivo** — el `terraform plan` de los pobres. Ese diff es el **diff-gate**: ningún cambio de firewall se aplica sin que el plan sea visible y revisado.
 
@@ -71,7 +71,7 @@ La clase de una operación la fija el **daño irreversible que puede causar**, n
 
 | Clase | Token | Operaciones |
 |---|---|---|
-| **Autónomo — lectura** (blast radius cero) | READ | `server list/describe/ip`, `server metrics`, `firewall describe` + diff, `image list`, detección de drift, auditoría, lecturas de `restic snapshots/check` |
+| **Autónomo — lectura** (blast radius cero) | READ | `server list/describe/ip`, `server metrics`, `firewall describe` + diff, `image list`, detección de drift, auditoría, lecturas de frescura off-site (`sftp ls` al Storage Box, o `restic snapshots` si el dial está activo) |
 | **Autónomo — additivo** (no destruye, da rollback) | R&W just-in-time | `create-image --type snapshot` pre-cambio, `enable-backup`, `add-label`, `server reboot` graceful (**no** `reset`) |
 | **Human-confirmed** (gate previo + token inyectado) | R&W break-glass | `server create` (aun con el guard idempotente), `firewall replace-rules` que **agregue** inbound, `change-type`/resize, restore desde snapshot |
 | **PROHIBIDO al agente** (fuera del toolset + protección a nivel API) | — | `server delete`, `server rebuild`, `firewall delete`, `remove-from-resource`, `disable-protection`, `volume delete`, `image delete`, `disable-backup` |
@@ -152,16 +152,16 @@ hcloud server enable-protection <id> delete rebuild
 
 ```bash
 # 1. Validar el archivo ANTES de tocar la API (bloquea 0.0.0.0/0 fuera de allowlist,
-#    exige el par v4+v6 y la regla SSH).
-operaciones/validate-firewall-rules.sh operaciones/firewall-rules.json
+#    exige el par v4+v6 y la regla SSH). El validador está en el PATH (bin/ del plugin).
+validate-firewall-rules.sh ops/firewall-rules.json
 
 # 2. Leer el estado vivo y mostrar el diff (el "plan" de los pobres).
 hcloud firewall describe <fw> -o json > /tmp/fw-live.json
 diff <(jq -S '.rules' /tmp/fw-live.json) \
-     <(jq -S '.' operaciones/firewall-rules.json) || true   # diff-gate: revisable
+     <(jq -S '.' ops/firewall-rules.json) || true   # diff-gate: revisable
 
 # 3. Converger con UNA operación atómica desde el archivo versionado.
-hcloud firewall replace-rules <fw> --rules-file operaciones/firewall-rules.json
+hcloud firewall replace-rules <fw> --rules-file ops/firewall-rules.json
 hcloud firewall apply-to-resource <fw> --type server --server <id>
 ```
 
@@ -179,7 +179,7 @@ El agente puede creer que solo previsualiza, pero el wrapper es quien garantiza 
 
 ### El wrapper como único choke-point
 
-`operaciones/hcloud-agent.sh` es la única superficie por la que el agente toca Hetzner. Responsabilidades:
+`hcloud-agent.sh` —en el `bin/` del plugin forja, en el PATH de la sesión— es la única superficie por la que el agente toca Hetzner. Responsabilidades:
 
 - **Allowlist de verbos**: solo deja pasar lo autónomo; niega lo destructivo aunque venga el token R&W.
 - **Token por env var, nunca como argumento**: inyecta `HCLOUD_TOKEN` en el entorno y jamás lo pasa en la línea de comando (aparecería en `ps`/history).
@@ -188,7 +188,7 @@ El agente puede creer que solo previsualiza, pero el wrapper es quien garantiza 
 
 ### Gate de post-condiciones
 
-Después de cualquier cambio, `operaciones/infra-verify.sh` valida a nivel API que el mundo quedó como se esperaba: el server existe y está `running`, la protección `delete`/`rebuild` sigue encendida, el firewall aplicado coincide con `firewall-rules.json`, y la IP derivada responde. Si una post-condición falla, el cambio se considera no terminado.
+Después de cualquier cambio, `infra-verify.sh` (también en el `bin/` del plugin) valida a nivel API que el mundo quedó como se esperaba: el server existe y está `running`, la protección `delete`/`rebuild` sigue encendida, el firewall aplicado coincide con `ops/firewall-rules.json`, y la IP derivada responde. Si una post-condición falla, el cambio se considera no terminado.
 
 ### Auditoría off-host
 

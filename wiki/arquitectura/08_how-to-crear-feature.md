@@ -21,7 +21,7 @@ related: [proc.sdd, arq.auth, arq.estilos-frontend, arq.gates-tooling]
 
 Receta canónica para añadir un contexto de negocio nuevo: siempre estos seis pasos, en este orden. Da por sentada la estructura de una feature (la [Referencia de la estructura del repositorio](./02_referencia-estructura-repo.md)) y las [Convenciones de código](./03_referencia-convenciones-codigo.md), a las que remite donde hace falta.
 
-Una feature realiza un cambio especificado en `openspec/changes/<cambio>/`, que a su vez concreta requisitos de `docs_sdd/`. Es el último eslabón del handoff `docs_sdd/ → openspec/ → src/`; el mapa completo de esa cadena está en [SDD, flujo de especificación y Gentle AI](../proceso/03_explicacion-sdd.md).
+Una feature realiza un cambio especificado en `openspec/changes/<cambio>/`, que a su vez concreta requisitos de `software_requirements/`. Es el último eslabón del handoff `software_requirements/ → openspec/ → src/`; el mapa completo de esa cadena está en [SDD, flujo de especificación y Gentle AI](../proceso/03_explicacion-sdd.md).
 
 ## Pasos
 

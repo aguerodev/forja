@@ -7,7 +7,7 @@ audience: both
 resumen: Spec-Driven Development como método, la cadena de artefactos que lo soporta y Gentle AI como configurador que lo ejecuta.
 provides:
   - "Spec-Driven Development (SDD)"
-  - "roadmap derivado (requisitos de docs_sdd sin realizar + changes activos de openspec; nunca una lista aparte; el tablero de intake es dial)"
+  - "roadmap derivado (requisitos de software_requirements sin realizar + changes activos de openspec; nunca una lista aparte; el tablero de intake es dial)"
   - "fases sucesivas (especificación -> plan -> implementación)"
   - "artefacto explícito por fase"
   - "fronteras de fase"
@@ -16,8 +16,8 @@ provides:
   - "Engram"
   - "modelo distinto por fase"
   - "sdd-init"
-  - "cadena de artefactos docs_sdd/ -> claude_design/ -> openspec/"
-  - "docs_sdd/"
+  - "cadena de artefactos software_requirements/ -> claude_design/ -> openspec/"
+  - "software_requirements/"
   - "claude_design/"
   - "openspec/"
   - "identificadores de trazabilidad RF-/RNF-/RN-/INC-"
@@ -25,7 +25,7 @@ provides:
   - "spec-doc-interviewer"
   - "lenguaje ubicuo"
   - "artifact-store"
-  - "formatos de artefactos (SRS ISO/IEC/IEEE 29148, dbdocs, Mermaid classDiagram)"
+  - "formatos de artefactos (catálogo de requisitos SRS ligero, dbdocs, Mermaid classDiagram)"
 reads-before: [fund.principios, proc.trabajo-ia]
 related: [arq.crear-feature]
 ---
@@ -49,7 +49,7 @@ Cómo la arquitectura del código materializa el flujo —orquestador delgado, s
 Antes de escribir código, el proyecto produce tres capas de artefactos en carpetas dedicadas, cada una alimentando a la siguiente: los **requerimientos** (qué construir y para quién), la **propuesta de interfaz** (cómo se ve) y las **especificaciones de cambio** (cómo se implementa cada cambio concreto).
 
 ```
-spec-doc-interviewer (skill)  ->  docs_sdd/
+spec-doc-interviewer (skill)  ->  software_requirements/
        requerimientos               │
                                     ├──>  claude.ai/design  ->  claude_design/
                                     │                            propuesta UI
@@ -60,34 +60,35 @@ spec-doc-interviewer (skill)  ->  docs_sdd/
                                                              proceso         specs/cambio    codigo
 ```
 
-### `docs_sdd/` — los requerimientos
+### `software_requirements/` — los requerimientos
 
 La crea el skill **`spec-doc-interviewer`** mediante entrevista (volcado libre + preguntas de selección + panel de revisión). Es la base de verdad de requerimientos y el insumo que Gentle AI consume para arrancar su SDD. Nombre de carpeta fijo, estructura predecible:
 
 ```
-docs_sdd/
+software_requirements/
 ├── README.md                 indice: estado por documento, INC resueltas, rondas de revision
+├── 00-handoff.md             contrato de handoff dirigido al agente (mapea cada doc a la fase SDD que alimenta e incluye el backlog de cambios candidatos)
 ├── 01-prd.md                 PRD — el porque y para quien
 ├── 02-glosario.md            lenguaje ubicuo: un termino por concepto
-├── 03-srs.md                 SRS (ISO/IEC/IEEE 29148) — que debe hacer el sistema (RF/RNF)
+├── 03-requisitos.md          catalogo de requisitos a nivel capacidad (SRS ligero) — que debe hacer el sistema (RF/RNF)
 ├── 04-reglas-de-negocio.md   catalogo de politicas e invariantes (RN)
 ├── 05-modelo-de-dominio.md   entidades y relaciones (Mermaid classDiagram)
-├── 06-modelo-de-datos.md     esquema y validaciones (prosa + flujo dbdocs)
-├── database.dbml             esquema en DBML: fuente de verdad, se publica con dbdocs
-├── schema.sql                (opcional) DDL generado desde el DBML
+├── 06-modelo-de-datos.md     (solo brownfield u orden explicita) base existente como restriccion (prosa + flujo dbdocs)
+├── database.dbml             (solo brownfield) esquema existente en DBML, se publica con dbdocs
+├── schema.sql                (solo brownfield, opcional) DDL generado desde el DBML
 └── review/                   bitacoras del panel de revision, una por documento
-    └── 01-prd.review.md … 06-modelo-de-datos.review.md
+    └── 01-prd.review.md … 05-modelo-de-dominio.review.md (y 06 si se creo)
 ```
 
-Los documentos forman una cadena: el SRS, las reglas, el dominio y el modelo de datos usan los términos del **glosario** (el **lenguaje ubicuo**: un término por concepto); el modelo de dominio se construye sobre las entidades del SRS y las reglas; el modelo de datos realiza el dominio en persistencia. Los identificadores son trazables: `RF-`/`RNF-` (requisitos), `RN-` (reglas), `INC-` (inconsistencias detectadas y resueltas).
+Los documentos forman una cadena: el catálogo de requisitos, las reglas, el dominio y el modelo de datos usan los términos del **glosario** (el **lenguaje ubicuo**: un término por concepto); el modelo de dominio se construye sobre las entidades del catálogo y las reglas; el modelo de datos realiza el dominio en persistencia. Los identificadores son trazables: `RF-`/`RNF-` (requisitos), `RN-` (reglas), `INC-` (inconsistencias detectadas y resueltas).
 
 ### `claude_design/` — la propuesta de interfaz
 
-La genera **`claude.ai/design`** a partir de los documentos de `docs_sdd/`. Junto con `docs_sdd/`, es uno de los dos insumos que Gentle AI recibe al arrancar el SDD. Su estructura interna y proceso de generación quedan fuera de alcance; lo relevante es que `claude_design/` es el eslabón entre los requerimientos y la implementación.
+La genera **`claude.ai/design`** a partir de los documentos de `software_requirements/`. Junto con `software_requirements/`, es uno de los dos insumos que Gentle AI recibe al arrancar el SDD. Su estructura interna y proceso de generación quedan fuera de alcance; lo relevante es que `claude_design/` es el eslabón entre los requerimientos y la implementación.
 
 ### `openspec/` — las especificaciones de cambio
 
-La crea **Gentle AI** cuando el artifact-store del SDD es `openspec` (o `hybrid`). Con el store `engram`, los mismos artefactos viven en memoria persistente y esta carpeta no aparece. Cada cambio es una carpeta bajo `changes/`, con los artefactos que el flujo SDD produce por fase (proposal → spec → design → tasks → apply → verify → archive):
+La crea **Gentle AI** cuando el artifact-store del SDD es `openspec` (o `hybrid`). Con el store `engram`, los mismos artefactos viven en memoria persistente y esta carpeta no aparece. Esta doctrina fija **`openspec` como default del equipo**: los artefactos de cambio son archivos versionados que cualquiera puede revisar en el PR. Cada cambio es una carpeta bajo `changes/`, con los artefactos que el flujo SDD produce por fase (proposal → spec → design → tasks → apply → verify → archive):
 
 ```
 openspec/
@@ -109,15 +110,15 @@ Al archivar un cambio, sus **delta specs** se integran en las **specs vigentes**
 
 ### La cadena, de punta a punta
 
-1. `docs_sdd/` fija los requerimientos del proyecto (estables, evolucionan poco).
-2. `claude_design/` traduce esos requerimientos a una propuesta de interfaz; junto con `docs_sdd/`, es el insumo de entrada de Gentle AI.
+1. `software_requirements/` fija los requerimientos del proyecto (estables, evolucionan poco).
+2. `claude_design/` traduce esos requerimientos a una propuesta de interfaz; junto con `software_requirements/`, es el insumo de entrada de Gentle AI.
 3. Cada cambio concreto nace como `openspec/changes/<cambio>/` y atraviesa las fases del SDD.
 4. La implementación cae en `src/features/<feature>/` —el hexágono completo de cada vertical slice, los archivos canónicos— siguiendo la [receta para crear una feature](../arquitectura/08_how-to-crear-feature.md), que fija la lista única de archivos del slice. El enrutado (Route Handlers y páginas) vive en `src/app/` como binding fino; la lógica de dominio, el servicio, los schemas Zod y el adaptador de repositorio pertenecen al slice bajo `src/features/`. El `route.ts` de cada slice registra además sus operaciones en el `OpenAPIRegistry` central: el **contrato OpenAPI se ensambla desde los slices**, no se redacta aparte (detalle en [Ensamblado del contrato OpenAPI](../arquitectura/07_referencia-gates-tooling.md#ensamblado-del-contrato-openapi)).
 5. Al archivar, las specs del cambio se consolidan en `openspec/specs/`, que refleja el estado vigente del sistema.
 
-**Trazabilidad del handoff.** La cadena `docs_sdd/ → openspec/ → src/` es rastreable de punta a punta por los identificadores que `docs_sdd/` fija (`RF-`/`RNF-`, `RN-`): cada `proposal.md` y cada delta spec bajo `openspec/changes/<cambio>/` declara qué requisitos realiza, y el slice resultante bajo `src/features/<feature>/` queda ligado a ese cambio. De un archivo de `src/` se sube al cambio de `openspec/` que lo originó, y de ahí al requisito de `docs_sdd/` que lo motivó —y a la inversa, de un requisito se baja al código que lo cumple—. Ningún eslabón inventa alcance: cada capa solo concreta lo que la anterior fijó.
+**Trazabilidad del handoff.** La cadena `software_requirements/ → openspec/ → src/` es rastreable de punta a punta por los identificadores que `software_requirements/` fija (`RF-`/`RNF-`, `RN-`): cada `proposal.md` y cada delta spec bajo `openspec/changes/<cambio>/` declara qué requisitos realiza, y el slice resultante bajo `src/features/<feature>/` queda ligado a ese cambio. De un archivo de `src/` se sube al cambio de `openspec/` que lo originó, y de ahí al requisito de `software_requirements/` que lo motivó —y a la inversa, de un requisito se baja al código que lo cumple—. Ningún eslabón inventa alcance: cada capa solo concreta lo que la anterior fijó.
 
-**El roadmap es derivado, no mantenido.** La misma cadena responde "¿qué viene / qué falta?" sin ningún artefacto nuevo: el roadmap ES los requisitos de `docs_sdd/` (incluidas las marcas `[PENDIENTE]`) que ningún cambio archivado realizó todavía, más los `openspec/changes/` activos (lo que está en vuelo). Una idea nueva entra como requisito o `[PENDIENTE]` en `docs_sdd/` **antes** de volverse un change — así el roadmap nunca se desactualiza porque no existe como lista aparte. Un tablero de intake (Issues/Projects) es entrada del dial; disparador: un stakeholder externo que necesite ver o priorizar el backlog sin leer el repo.
+**El roadmap es derivado, no mantenido.** La misma cadena responde "¿qué viene / qué falta?" sin ningún artefacto nuevo: el roadmap ES los requisitos de `software_requirements/` (incluidas las marcas `[PENDIENTE]`) que ningún cambio archivado realizó todavía, más los `openspec/changes/` activos (lo que está en vuelo). Una idea nueva entra como requisito o `[PENDIENTE]` en `software_requirements/` **antes** de volverse un change — así el roadmap nunca se desactualiza porque no existe como lista aparte. Un tablero de intake (Issues/Projects) es entrada del dial; disparador: un stakeholder externo que necesite ver o priorizar el backlog sin leer el repo.
 
 ## Qué es Gentle AI
 
@@ -125,12 +126,12 @@ Gentle AI es un **configurador de ecosistema** sobre el agente de IA (por ejempl
 
 ### Qué añade sobre el agente
 
-- **Memoria persistente (Engram).** Registra decisiones y bugs entre sesiones, de modo que el conocimiento no se pierde al cerrar una conversación.
+- **Memoria persistente (Engram).** Registra decisiones y bugs entre sesiones, de modo que el conocimiento no se pierde al cerrar una conversación. Es memoria **personal** de cada developer —local a su máquina—, nunca el canal de coordinación del equipo: lo compartido vive en artefactos versionados (`software_requirements/`, `openspec/`, la doctrina).
 - **Un flujo de Spec-Driven Development** con un **orquestador delgado** y **sub-agentes especializados por fase**: la conducción queda arriba y el trabajo de cada fase en su sub-agente.
 - **Skills curadas.** Capacidades reutilizables que el agente aplica de forma uniforme entre features.
 - **Modelo distinto por fase.** Permite asignar un modelo potente para diseñar, uno rápido para implementar y uno barato para explorar, según lo que cada fase exige.
 
-El ciclo arranca con **`sdd-init`**, el comando que detecta el stack del proyecto, bootstrapea el backend de persistencia (el artifact-store: `openspec`, `engram` o `hybrid`) y deja el contexto listo para las fases siguientes.
+El ciclo arranca con **`sdd-init`**, el comando que detecta el stack del proyecto, bootstrapea el backend de persistencia (el artifact-store: `openspec` —el default del equipo que esta doctrina fija—, `engram` o `hybrid`) y deja el contexto listo para las fases siguientes.
 
 ### Por qué la arquitectura del proyecto lo hace rendir
 
@@ -141,4 +142,4 @@ La forma del código está pensada para que el flujo rinda; cada decisión de [T
 - **La convención** es el sustrato que vuelve transferibles las skills: cuanto más uniforme el código, más aplica una skill genérica en cualquier feature.
 - **Las anclas estables** —wiki, convenciones, errores de dominio explícitos— dan a la memoria persistente puntos de anclaje y reducen la deriva que debe reconciliar.
 
-La descripción se ciñe a lo que el proyecto declara de Gentle AI; el detalle operativo de comandos y fases no es alcance de la wiki. El procedimiento completo para arrancar un proyecto nuevo —de la wiki a producción— está en [Arrancar un proyecto nuevo](./04_how-to-arrancar-proyecto-nuevo.md).
+La descripción se ciñe a lo que el proyecto declara de Gentle AI; el detalle operativo de comandos y fases no es alcance de la wiki. El procedimiento completo para arrancar un proyecto nuevo —de la doctrina a producción— está en [Arrancar un proyecto nuevo](./04_how-to-arrancar-proyecto-nuevo.md).

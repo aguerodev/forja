@@ -12,7 +12,7 @@ provides:
   - distinción APP vs PUBLIC_NAME (APP = slug de stack/imagen; PUBLIC_NAME = label DNS público; un '_' en un hostname es inválido)
   - convención de hostnames por entorno (${PUBLIC_NAME}.<dominio> prod; dev-${PUBLIC_NAME}.<dominio> test)
   - patrón de nombre de stack ${APP}_<env>
-  - docker context de prod fijado en deploy.sh (myapp-prod); test neutraliza DOCKER_CONTEXT y usa el contexto local
+  - docker context de prod fijado en deploy.sh (${APP}-prod); test neutraliza DOCKER_CONTEXT y usa el contexto local
   - Dockerfile multi-stage (base / deps / builder / runner / migrator / backup)
   - tres imágenes por --target (runner → ${APP}:latest; migrator → ${APP}:migrate; backup → ${APP}:backup)
   - Node alpine + pnpm vía Corepack (packageManager; --frozen-lockfile)
@@ -56,7 +56,7 @@ El **riel de staging queda precableado pero apagado**: `deploy.sh` acepta `ENV=t
 
 | Entorno | Hostname público | Stack | Docker context |
 |---|---|---|---|
-| prod | `${PUBLIC_NAME}.<dominio>` | `${APP}_prod` | `myapp-prod` (fijado en `deploy.sh`) |
+| prod | `${PUBLIC_NAME}.<dominio>` | `${APP}_prod` | `${APP}-prod` (fijado en `deploy.sh`) |
 | test (riel local) | `dev-${PUBLIC_NAME}.<dominio>` | `${APP}_test` | — (contexto local activo) |
 
 - **Patrón de nombre de stack:** `${APP}_<env>` (p. ej. `${APP}_prod`).
@@ -90,7 +90,7 @@ Principios estructurales:
 | Cómo | `pnpm dev` contra `localhost:3000` | Stack en Swarm |
 | Dominio | `localhost` | `${PUBLIC_NAME}.<dominio>` |
 | Stack | — | `${APP}_prod` |
-| Docker context | — | `myapp-prod` |
+| Docker context | — | `${APP}-prod` |
 | Réplicas app | — | 1 |
 | Backups | — | sí ([Backups](./09_how-to-backups.md)) |
 

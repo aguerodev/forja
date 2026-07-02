@@ -13,10 +13,10 @@ provides:
   - radio de daño acotado (blast radius)
   - handoff entre fases como artefacto explícito
   - anclas estables (wiki + convenciones + errores explícitos como memoria del agente)
-  - "reglas operativas del agente (.claude/rules/, copia portable en wiki/rules/ con gate de diff)"
+  - "reglas operativas del agente (wiki/rules/ dentro del plugin forja, impuestas por hooks del plugin)"
   - bucle apretado de señales (tipos + tests + linters como canal de control del agente)
   - skills curadas transferibles por convención
-  - "Gitflow multi-agente (main producción, develop integración, features cortas; solo main despliega vía /deploy)"
+  - "Gitflow multi-agente (main producción, develop integración, features cortas; solo main despliega vía /forja:deploy)"
   - "modelo completo de ramas (main/develop/feature/release/hotfix; bump en release/*; back-merge obligatorio main -> develop tras cada release o hotfix)"
   - "reglas de commit (Conventional Commits tipo(scope): imperativo; un commit = unidad de trabajo revisable; sin atribución de IA; commitlint es dial)"
   - "colisiones acotadas por slice (una feature = una carpeta = un agente; Gitflow pone la cadencia encima)"
@@ -50,7 +50,7 @@ La memoria persistente del flujo registra decisiones y bugs entre sesiones; las 
 
 ## Las reglas operativas del agente derivan de esta wiki
 
-Las reglas que el agente carga en cada sesión viven en `.claude/rules/` como imperativos condensados —flujo de git, commits, gates, arquitectura, secretos, deploy y colaboración multi-agente— derivados de esta wiki, que sigue siendo la fuente de verdad: si una regla y su doc dueño divergen, se corrige la regla. La wiki lleva una copia portable idéntica en `rules/` (su raíz), que un proyecto nuevo copia a su `.claude/rules/` al traer la wiki, y el gate `pnpm check:reglas` (un `diff` dentro de `pnpm run check`) rompe el build si las copias divergen — el mismo patrón que los comandos del operador en `operaciones/comandos/` ([Release por comando](../operaciones/08_how-to-pipeline-cicd.md)).
+Las reglas que el agente carga en cada sesión viven en `wiki/rules/` **dentro del plugin forja** como imperativos condensados —flujo de git, commits, gates, arquitectura, secretos, deploy y colaboración multi-agente— derivados de esta wiki, que sigue siendo la fuente de verdad: si una regla y su doc dueño divergen, se corrige la regla. Las de mayor riesgo se **imponen con hooks del plugin** —la guardia de Gitflow, la atribución de IA en commits, el choke-point de infra— y el `CLAUDE.md` del proyecto las referencia: no hay copias por proyecto que sincronizar.
 
 ## Gates de fase, no aprobación por edición
 
@@ -81,7 +81,7 @@ El modelo completo de ramas — la doctrina portable que cualquier repo de la ag
 Dos reglas específicas del trabajo con agentes:
 
 1. **Ramas de feature CORTAS.** Un agente genera mucho código rápido: una rama que vive dos semanas acumula un diff gigante contra un `develop` que también se movió rápido, y el merge se vuelve el punto de dolor que el slice había evitado. La feature sale de `develop`, se implementa, pasa los gates y vuelve — días, no semanas.
-2. **Solo `main` llega a producción, y el gate es ejecutable.** GitHub (plan free, repo privado) no ofrece branch protection: la regla la impone el **preflight del comando `/deploy`** (rama `main`, tree limpio, al día con `origin/main`, gates verdes, confirmación explícita). El despliegue es reversible en dos planos —software y datos— documentados en [Release por comando](../operaciones/08_how-to-pipeline-cicd.md). Así todos pueden desplegar, y un deploy fallido se revierte en vez de lamentarse.
+2. **Solo `main` llega a producción, y el gate es ejecutable.** GitHub (plan free, repo privado) no ofrece branch protection: la regla la impone el **preflight del comando `/forja:deploy`** (rama `main`, tree limpio, al día con `origin/main`, gates verdes, confirmación explícita). El despliegue es reversible en dos planos —software y datos— documentados en [Release por comando](../operaciones/08_how-to-pipeline-cicd.md). Así todos pueden desplegar, y un deploy fallido se revierte en vez de lamentarse.
 
 ## El guardarraíl real es ejecutable, no la prosa
 

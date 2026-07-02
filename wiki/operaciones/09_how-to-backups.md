@@ -97,7 +97,7 @@ El orden importa (ver Norma). Verificado contra un Storage Box real de Hetzner:
 
 ```bash
 # 1. Generar la clave dedicada EN EL NODO (o localmente si va al secret del sidecar).
-ssh myapp-prod 'umask 077; ssh-keygen -t ed25519 -f ~/.ssh/storagebox -N "" -C "<app>-backup@prod"
+ssh ${APP}-prod 'umask 077; ssh-keygen -t ed25519 -f ~/.ssh/storagebox -N "" -C "<app>-backup@prod"
                 cat ~/.ssh/storagebox.pub'
 
 # 2. En la consola de Hetzner: crear el Storage Box registrando ESA clave pública,
@@ -105,11 +105,11 @@ ssh myapp-prod 'umask 077; ssh-keygen -t ed25519 -f ~/.ssh/storagebox -N "" -C "
 #    Anotar el usuario/host resultante: uNNNNNN@uNNNNNN.your-storagebox.de
 
 # 3. Verificar DESDE EL NODO (no desde la laptop: puerto 23 suele estar bloqueado ahí).
-ssh myapp-prod 'echo "pwd" | sftp -i ~/.ssh/storagebox -P 23 \
+ssh ${APP}-prod 'echo "pwd" | sftp -i ~/.ssh/storagebox -P 23 \
   -o BatchMode=yes -o StrictHostKeyChecking=accept-new -b - uNNNNNN@uNNNNNN.your-storagebox.de'
 
 # 4. Verificar ESCRITURA (un destino al que nunca escribiste no es un destino).
-ssh myapp-prod 'echo ok > /tmp/sb_test.txt && printf "put /tmp/sb_test.txt\nls -l sb_test.txt\nrm sb_test.txt\n" \
+ssh ${APP}-prod 'echo ok > /tmp/sb_test.txt && printf "put /tmp/sb_test.txt\nls -l sb_test.txt\nrm sb_test.txt\n" \
   | sftp -i ~/.ssh/storagebox -P 23 -o BatchMode=yes -b - uNNNNNN@uNNNNNN.your-storagebox.de'
 ```
 

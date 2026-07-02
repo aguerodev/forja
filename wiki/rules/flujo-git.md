@@ -7,6 +7,6 @@
 - Usá `hotfix/<nombre>` solo para urgencias sobre producción: sale de `main` y vuelve a `main` Y a `develop`.
 - Tras cada merge a `main` (release o hotfix), hacé el back-merge `main` → `develop` por PR — no es opcional: sin él, `develop` queda con la versión vieja y el próximo release nace mal numerado.
 - No mergees ningún PR sin los gates verdes (`pnpm run check`; local = CI).
-- Solo `main` llega a producción, y el candado real es el preflight de `/deploy`, no GitHub.
+- Solo `main` llega a producción, y el candado real es el preflight de `/forja:deploy`, no GitHub.
 
 Doctrina: wiki/proceso/01_explicacion-trabajo-con-ia.md

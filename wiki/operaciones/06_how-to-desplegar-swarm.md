@@ -7,7 +7,7 @@ audience: both
 resumen: Desplegar la app como stack de Swarm en ambos entornos con el mismo stack.yml y deploy.sh, incluyendo la transición de estado del túnel.
 provides:
   - "deploy.sh <env> (5 fases; health node-side fatal + edge warn-only)"
-  - "elección de docker context por entorno (prod vía context/alias SSH myapp-prod; test con DOCKER_CONTEXT neutralizado)"
+  - "elección de docker context por entorno (prod vía context/alias SSH ${APP}-prod; test con DOCKER_CONTEXT neutralizado)"
   - "comandos de verificación del stack (stack ls / stack services / secret ls)"
   - "transición de estado del túnel inactive -> healthy al conectar el conector"
   - "regla de un solo conector (bajar el entorno de test del servidor antes de levantarlo en local)"
@@ -20,7 +20,7 @@ related: [proc.arrancar]
 # Desplegar el stack en Swarm
 
 > **Este es el mecanismo canónico de deploy del proyecto.** En producción no se invoca
-> `deploy.sh` a mano: lo conduce el comando **`/deploy`** de Claude Code, que agrega el
+> `deploy.sh` a mano: lo conduce el comando **`/forja:deploy`** de Claude Code, que agrega el
 > preflight (rama `main`, tree limpio, gates verdes, confirmación), el backup off-site y
 > los dos planos de rollback. El modelo completo de release está en
 > [Release por comando y CI de gates](./08_how-to-pipeline-cicd.md); este doc documenta la
@@ -34,7 +34,7 @@ Despliega la aplicación como **stack del Swarm** en dos entornos aislados (`pro
 
 La única diferencia entre desplegar a producción y a un entorno de pruebas es el **docker context** sobre el que opera `deploy.sh`. El mismo archivo de stack, script y mecanismo de secrets producen ambos entornos. Esto da la **paridad dev-local / prod-server**: el comando que validas en local es, byte por byte, el que corre contra el servidor.
 
-- **`prod`** despliega en el servidor a través del context **`myapp-prod`**. El nombre está **fijado por `deploy.sh` y `scripts/release/lib.sh`**, y el **mismo nombre debe existir además como alias `Host` en `~/.ssh/config`**: los scripts de release hacen `ssh myapp-prod` directamente contra el nodo.
+- **`prod`** despliega en el servidor a través del context **`${APP}-prod`**. La convención del nombre está **fijada por `deploy.sh` y `scripts/release/lib.sh`** (misma convención que en [el modelo de operación](./01_explicacion-modelo-operacion.md)), y el **mismo nombre debe existir además como alias `Host` idéntico en `~/.ssh/config`**: los scripts de release hacen `ssh ${APP}-prod` directamente contra el nodo.
 - **`test`** despliega en el Swarm **local**: `deploy.sh` hace `unset DOCKER_CONTEXT` deliberadamente para que un context heredado **jamás redirija un deploy de test al nodo de producción**; usa el context local activo.
 
 Todos los comandos se ejecutan **en tu máquina local**: `deploy.sh` resuelve el docker context según el entorno y, sobre ese context, construye las imágenes y opera el Swarm.
@@ -71,9 +71,9 @@ Antes de desplegar necesitas:
 
 - El servidor [aprovisionado](./03_how-to-aprovisionar-servidor.md) y [endurecido](./04_how-to-endurecer-acceso.md): Swarm de un nodo (manager), usuario `deploy` en el grupo `docker`, firewall dejando entrar solo SSH.
 - Los túneles [aprovisionados por API](./05_how-to-exponer-cloudflare-tunnel.md) con su ingress, su CNAME y su token en `secrets/<env>.env` (clave del token del túnel).
-- Para `prod`: el docker context **`myapp-prod`** apuntando al servidor por SSH, **y** el alias `Host myapp-prod` en `~/.ssh/config` (los scripts de release hacen `ssh` a ese mismo nombre):
+- Para `prod`: el docker context **`${APP}-prod`** apuntando al servidor por SSH, **y** el alias `Host ${APP}-prod` en `~/.ssh/config` (los scripts de release hacen `ssh` a ese mismo nombre):
   ```bash
-  docker context create myapp-prod --docker host=ssh://deploy@<IP>
+  docker context create ${APP}-prod --docker host=ssh://deploy@<IP>
   ```
 - Para `test`: un **Swarm local** ya inicializado (`docker swarm init`); no hay variable de context que exportar (`deploy.sh` neutraliza `DOCKER_CONTEXT`).
 - Los archivos del proyecto en la raíz del repositorio (`src/`, `Dockerfile`, `stack.yml`, `deploy.sh`) y un `secrets/<env>.env` con **todas** las claves que el stack exige.
@@ -81,7 +81,7 @@ Antes de desplegar necesitas:
 
 ## Camino verificado
 
-Validado desplegando los dos entornos reales: stack de producción en el servidor (context `myapp-prod`) y stack de pruebas en el Swarm local.
+Validado desplegando los dos entornos reales: stack de producción en el servidor (context `${APP}-prod`) y stack de pruebas en el Swarm local.
 
 ### Paso 1 — Desplegar producción
 
@@ -89,15 +89,15 @@ Validado desplegando los dos entornos reales: stack de producción en el servido
 ./deploy.sh prod
 ```
 
-El script encadena las cinco fases de la Norma sobre el context `myapp-prod` y termina validando la **salud node-side** contra `/api/health` (edge warn-only).
+El script encadena las cinco fases de la Norma sobre el context `${APP}-prod` y termina validando la **salud node-side** contra `/api/health` (edge warn-only).
 
 ### Paso 2 — Verificar producción
 
 Lista el stack y sus servicios:
 
 ```bash
-docker -c myapp-prod stack ls
-docker -c myapp-prod stack services ${STACK}
+docker -c ${APP}-prod stack ls
+docker -c ${APP}-prod stack services ${STACK}
 ```
 
 El stack debe aparecer con **cinco servicios**, cada uno con 1 réplica:
@@ -142,9 +142,9 @@ Repite el despliegue para `test`, esta vez contra el **Swarm local**:
 
 > **Antes de levantar `test` en local, bájalo del servidor** (regla del único conector). Retíralo del servidor primero, stack y secrets incluidos:
 > ```bash
-> docker -c myapp-prod stack rm ${APP}_test
-> docker -c myapp-prod secret ls --format '{{.Name}}' | grep "^${APP}_test_" \
->   | xargs -n1 docker -c myapp-prod secret rm
+> docker -c ${APP}-prod stack rm ${APP}_test
+> docker -c ${APP}-prod secret ls --format '{{.Name}}' | grep "^${APP}_test_" \
+>   | xargs -n1 docker -c ${APP}-prod secret rm
 > ```
 
 El flujo es análogo, sin la fase de backup (solo `prod`), y termina con el health node-side y la sonda warn-only sobre `https://<host-de-test>/api/health`. Verifica con `docker stack services ${APP}_test`: los mismos cinco servicios, con `migrate` en `0/1 (1/1 completed)`.
@@ -154,8 +154,8 @@ El flujo es análogo, sin la fase de backup (solo `prod`), y termina con el heal
 Confirma que cada entorno quedó arriba en **su** context:
 
 ```bash
-docker -c myapp-prod stack ls
-docker -c myapp-prod secret ls
+docker -c ${APP}-prod stack ls
+docker -c ${APP}-prod secret ls
 ```
 
 `stack ls` debe mostrar **solo** el stack de producción (5 servicios). `secret ls` debe listar sus secrets prefijados por stack (los 12 que exige `stack.yml`). Repite ambos comandos sin `-c` (context local) para el stack de pruebas.

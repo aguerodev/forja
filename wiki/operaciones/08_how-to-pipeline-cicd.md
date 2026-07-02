@@ -4,10 +4,10 @@ titulo: Release por comando y CI de gates
 tipo: how-to
 tier: 3
 audience: both
-resumen: El modelo de entrega — gates en el PR vía CI, ship por el comando /deploy del operador — con el orden canónico de release, los dos planos de rollback y la disciplina expand/contract.
+resumen: El modelo de entrega — gates en el PR vía CI, ship por el comando /forja:deploy del operador — con el orden canónico de release, los dos planos de rollback y la disciplina expand/contract.
 provides:
-  - "gate en el PR, ship por comando (/deploy) — el CI verifica, no despliega"
-  - "orden canónico de release (release/* -> main -> /deploy -> registro -> back-merge)"
+  - "gate en el PR, ship por comando (/forja:deploy) — el CI verifica, no despliega"
+  - "orden canónico de release (release/* -> main -> /forja:deploy -> registro -> back-merge)"
   - "preflight como provenance gate (rama main, tree limpio, al día con origin, gates verdes, confirmación explícita)"
   - "salvaguardas del deploy (working tree sucio, confirmación explícita; secrets: preflight blando + aserción dura REQUIRED_SECRETS contra el swarm)"
   - "migración como replicated-job declarado en stack.yml (lo lanza el propio docker stack deploy; deploy.sh la gatea con polling del estado de la task)"
@@ -16,8 +16,8 @@ provides:
   - "rollback en dos planos (software: service rollback barato y automático-ofrecible; datos: pg_restore destructivo, human-confirmed)"
   - "el tag vX.Y.Z como registro del release, no como trigger; su cuerpo anotado ES el changelog generado (git log <prev>..HEAD; se lee con git tag -n99)"
   - "capas del release: comando delgado sobre scripts deterministas; gates humanos sin scriptear"
-  - "copias portables de los comandos (operaciones/comandos/, idénticas por gate de diff)"
-  - "interfaz de operación por entorno (/deploy preview|production y /rollback preview|production; preview = swarm local)"
+  - "comandos del operador en el plugin forja (deploy y rollback; scripts deterministas en el proyecto)"
+  - "interfaz de operación por entorno (/forja:deploy preview|production y /forja:rollback preview|production; preview = swarm local)"
   - "rollback multi-versión (tags post-health, descripción por commit, regreso con latest)"
   - "jobs de verificación de ci.yml como gates de PR (check, integration, contract; mutation nightly)"
   - "concurrency (cancel-in-progress true para check; los deploys no se serializan en CI porque el ship es manual y humano)"
@@ -32,7 +32,7 @@ related: [arq.gates-tooling, ops.backups]
 El modelo de entrega separa dos responsabilidades que antes vivían juntas:
 
 - **El CI verifica** (GitHub Actions): los gates corren en cada PR y bloquean el merge. El CI **no despliega**.
-- **El operador embarca** (comando `/deploy` de Claude Code): cuando la versión está probada en dev, el operador corre `/deploy` desde su máquina y el release completo —preflight, backup, deploy, verificación, rollback si hace falta— ocurre en una sola operación conducida.
+- **El operador embarca** (comando `/forja:deploy` de Claude Code): cuando la versión está probada en dev, el operador corre `/forja:deploy` desde su máquina y el release completo —preflight, backup, deploy, verificación, rollback si hace falta— ocurre en una sola operación conducida.
 
 Este doc fija la **norma** portable del release y el **camino verificado** con la evidencia de por qué se abandonó el deploy por CI.
 
@@ -48,7 +48,7 @@ La razón de fondo es de proporcionalidad ([robusto no es máximo](../fundamento
 
 ### El preflight ES el provenance gate
 
-En el plan free de GitHub no hay branch protection en repos privados: nada impide técnicamente pushear a `main` o desplegar una rama cualquiera. El control real vive en el **preflight del comando `/deploy`**, que aborta si no se cumple TODO:
+En el plan free de GitHub no hay branch protection en repos privados: nada impide técnicamente pushear a `main` o desplegar una rama cualquiera. El control real vive en el **preflight del comando `/forja:deploy`**, que aborta si no se cumple TODO:
 
 1. Rama actual `main`, working tree limpio.
 2. `HEAD` == `origin/main` (ni adelantado ni atrasado).
@@ -60,11 +60,11 @@ La regla de Gitflow "solo `main` llega a producción" deja de ser prosa: es un e
 
 ### El comando conduce, el script decide
 
-Cada fase del release es un **script determinista** en `scripts/release/` con salida `[PASS]`/`[FAIL]` y exit code; el comando (`.claude/commands/deploy.md`, `rollback.md`) es un conductor delgado que ejecuta scripts en orden y actúa según el código de salida. Es el principio de [guardarraíles ejecutables](../fundamentos/01_explicacion-principios.md) aplicado al release: la lógica no vive en prosa que un modelo de lenguaje interpreta, vive en una herramienta que decide igual todas las veces.
+Cada fase del release es un **script determinista** en `scripts/release/` con salida `[PASS]`/`[FAIL]` y exit code; el comando del plugin (`/forja:deploy`, `/forja:rollback`) es un conductor delgado que ejecuta scripts en orden y actúa según el código de salida. Es el principio de [guardarraíles ejecutables](../fundamentos/01_explicacion-principios.md) aplicado al release: la lógica no vive en prosa que un modelo de lenguaje interpreta, vive en una herramienta que decide igual todas las veces.
 
 Lo único que NUNCA se scriptea son los **gates humanos**: confirmar `prod` antes de desplegar, `rollback` antes de revertir producción y `restaurar datos` antes de tocar el plano de datos. Un guardarraíl que importa se prueba también en negativo: los scripts se validan verificando que **fallan** cuando deben (preflight fuera de `main`, verify con SHA equivocado), no solo que pasan.
 
-La interfaz del operador queda por entorno: **`/deploy preview|production`** y **`/rollback preview|production`**, donde `preview` es el swarm local (`dev-shorter.<dominio>`) sin gates de procedencia — existe justamente para probar trabajo en curso — y `production` exige el protocolo completo.
+La interfaz del operador queda por entorno: **`/forja:deploy preview|production`** y **`/forja:rollback preview|production`**, donde `preview` es el swarm local (`dev-shorter.<dominio>`) sin gates de procedencia — existe justamente para probar trabajo en curso — y `production` exige el protocolo completo.
 
 ### Orden canónico de un release
 
@@ -72,9 +72,9 @@ El release empieza en Gitflow, no en el deploy — tres pasos previos (el modelo
 
 - **a.** Cortar `release/<versión>` desde `develop` y hacer ahí el **bump de `package.json`**.
 - **b.** PR `release/<versión>` → `main` con los gates verdes; merge.
-- **c.** `git checkout main && git pull` en la máquina del operador — recién ahí corre `/deploy`.
+- **c.** `git checkout main && git pull` en la máquina del operador — recién ahí corre `/forja:deploy`.
 
-`/deploy` conduce; `deploy.sh prod` ejecuta las fases contra el nodo (vía docker context). La secuencia completa:
+`/forja:deploy` conduce; `deploy.sh prod` ejecuta las fases contra el nodo (vía docker context). La secuencia completa:
 
 1. **Preflight** (arriba). Aborta barato, antes de tocar nada.
 2. **Build en el nodo** vía el context del entorno ([Desplegar el stack en Swarm](./06_how-to-desplegar-swarm.md)).
@@ -133,7 +133,7 @@ Si se sube este escalón, el trabajo ya está hecho una vez: el riel del pipelin
 
 ### Los comandos y sus scripts
 
-Los comandos viven en `.claude/commands/` (`deploy.md`, `rollback.md`) y conducen; la verdad ejecutable vive en `deploy.sh` y en `scripts/release/`. La wiki lleva una **copia portable** de cada comando en `operaciones/comandos/` — es lo que un proyecto nuevo copia a su `.claude/commands/` al traer la wiki (ajustando el bloque "Contexto fijo del proyecto"). Las dos copias se mantienen **idénticas por gate, no por memoria**: `pnpm check:comandos` (un `diff`, dentro de `pnpm run check`) rompe el build si divergen.
+Los comandos son **`/forja:deploy`** y **`/forja:rollback`**, del plugin forja, y conducen; la verdad ejecutable vive en el repo del proyecto — `deploy.sh` y `scripts/release/`, instanciados por `/forja:init` — y lee el contexto del proyecto (app, context, host) desde el `.forja.json` commiteado. No hay copias por proyecto de los comandos que mantener sincronizadas: el plugin es la única fuente.
 
 | Script | Fase | Qué decide |
 |---|---|---|
@@ -150,7 +150,7 @@ Dos contratos finos que costaron un bug cada uno: el `BUILD_SHA` que describe ca
 
 ### Demo verificada: deploy y rollback por descripción
 
-El flujo completo se ejercitó de punta a punta en preview con un cambio visible (el texto del hero de la home): `/deploy preview` publicó el cambio en `dev-shorter`, `versions.sh` listó las versiones distinguidas por su commit (`77fdfea feat(home): hero text...` vs `e3afbc5 Merge PR #9...`), el rollback al tag anterior devolvió el texto viejo **verificado en el HTML servido** (no solo en el exit code), y `rollback-to.sh preview latest` restauró el nuevo. La verificación de un rollback es el contenido servido, no el comando que corrió.
+El flujo completo se ejercitó de punta a punta en preview con un cambio visible (el texto del hero de la home): `/forja:deploy preview` publicó el cambio en `dev-shorter`, `versions.sh` listó las versiones distinguidas por su commit (`77fdfea feat(home): hero text...` vs `e3afbc5 Merge PR #9...`), el rollback al tag anterior devolvió el texto viejo **verificado en el HTML servido** (no solo en el exit code), y `rollback-to.sh preview latest` restauró el nuevo. La verificación de un rollback es el contenido servido, no el comando que corrió.
 
 ### Lección verificada: el pipeline por tag
 

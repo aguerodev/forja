@@ -168,7 +168,7 @@ El modelo es un Swarm de un solo nodo: el manager, PostgreSQL y su volumen viven
 
 1. Re-aprovisionar una VPS nueva. Camino rápido: restaurar el **golden snapshot** del base endurecido (ver más abajo) para saltarse el aprovisionamiento manual. Camino desde cero: correr `provision.sh` + [Endurecer el acceso](./04_how-to-endurecer-acceso.md).
 2. Restaurar `secrets/prod.env` desde la copia off-site (gestor de secretos del equipo) a la máquina del operador: contiene TODOS los valores de secrets, incluidos `backup_ssh_key_b64` y `storage_box_dest`.
-3. Recrear el alias SSH y el docker context `myapp-prod` (mismo nombre) apuntando al nuevo host (ver [Desplegar el stack en Swarm](./06_how-to-desplegar-swarm.md)).
+3. Recrear el alias SSH y el docker context `${APP}-prod` (mismo nombre) apuntando al nuevo host (ver [Desplegar el stack en Swarm](./06_how-to-desplegar-swarm.md)).
 4. Redeplegar con `./deploy.sh prod` desde la máquina del operador: recrea los secrets desde `secrets/prod.env` y materializa servicios, red overlay, `cloudflared` y el sidecar `backup` (que corre un dump al arrancar — el nodo nuevo no queda sin respaldo). La base nace **vacía** y las migraciones corren: hay schema, todavía no datos.
 5. Restaurar los datos: bajar del Storage Box el dump diario más reciente (`backups/<stack>/daily/`) — o el pre-migración (`backups/<stack>/pre-migration/` o el local en `backups/`) si es más fresco — y aplicarlo sobre la **misma versión major** ([Backups](./09_how-to-backups.md)): `docker exec -i <db_cid> pg_restore --clean --if-exists -U app -d app_shorter < <dump>`.
 6. El conector `cloudflared` reconecta el túnel existente; el dominio vuelve de `inactive`/error 1033 a `healthy` sin tocar el DNS.

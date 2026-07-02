@@ -17,7 +17,7 @@ provides:
   - "local = CI"
   - "smoke de contrato en PR (Schemathesis, 25 ejemplos; la pasada exhaustiva es dial)"
   - "OpenAPIRegistry / buildOpenApiDocument"
-  - "protección de ramas según plan (free: convención + preflight de /deploy como candado real; Team: branch protection como dial)"
+  - "protección de ramas según plan (free: convención + preflight de /forja:deploy como candado real; Team: branch protection como dial)"
   - "scaffold: estado real (generador de features pendiente, se copia la forma de un slice) y objetivo pnpm plop feature con flags condicionales"
   - "ci.yml jobs de verificación"
   - "engines + .nvmrc"
@@ -303,7 +303,7 @@ ALTER TABLE "<tabla>" DROP COLUMN "<columna_vieja>";
 
 El override es rastreable en el diff —igual que un supresor de tipos— y obliga a nombrar la razón, no a esconderla.
 
-El linter corre **dentro de `pnpm run check`** (es un paso más de la cadena), así que el gate es idéntico en local, en el preflight de `/deploy` y en el job `check` del CI — no necesita un job propio: parsea texto en milisegundos.
+El linter corre **dentro de `pnpm run check`** (es un paso más de la cadena), así que el gate es idéntico en local, en el preflight de `/forja:deploy` y en el job `check` del CI — no necesita un job propio: parsea texto en milisegundos.
 
 Las migraciones se **aplican** de verdad contra un Postgres real (misma major que prod) en el job `contract` del CI, que migra la base antes de levantar la app y fuzzear el contrato. Aplicarlas contra una base **vacía** dos veces —en un job propio y en `contract`— era gasto duplicado sin señal nueva; se eliminó.
 
@@ -492,7 +492,7 @@ El cableado de estos jobs en el pipeline (concurrency, environment, orden de eta
 
 Los gates de arriba solo valen si **no se pueden saltear** — y acá la doctrina es honesta sobre qué impone GitHub y qué no, porque depende del plan:
 
-- **Con plan free y repo privado (el caso base de la agencia): GitHub NO ofrece branch protection ni rulesets.** Nada impide técnicamente un push directo a `main`. La regla "todo entra por PR" se sostiene por convención de equipo, y el **candado ejecutable real es el preflight del comando `/deploy`**: nada llega a producción si no es `main`, limpio, al día con `origin/main` y con los gates verdes ([Release por comando](../operaciones/08_how-to-pipeline-cicd.md)). Un push directo furtivo a `main` sigue siendo posible, pero no despliega solo — y los jobs de CI en push a `main`/`develop` lo dejan en evidencia si rompe algo.
+- **Con plan free y repo privado (el caso base de la agencia): GitHub NO ofrece branch protection ni rulesets.** Nada impide técnicamente un push directo a `main`. La regla "todo entra por PR" se sostiene por convención de equipo, y el **candado ejecutable real es el preflight del comando `/forja:deploy`**: nada llega a producción si no es `main`, limpio, al día con `origin/main` y con los gates verdes ([Release por comando](../operaciones/08_how-to-pipeline-cicd.md)). Un push directo furtivo a `main` sigue siendo posible, pero no despliega solo — y los jobs de CI en push a `main`/`develop` lo dejan en evidencia si rompe algo.
 - **Con plan Team o repo público — escalación del dial** (disparador: más colaboradores externos o un cliente que exige el candado): activar branch protection en `main` con push directo prohibido, status checks requeridos (`check`, `integration`, `contract`; `mutation` queda fuera por ser nightly), rama actualizada antes del merge, y sin force-push ni borrado.
 
 El principio no cambia: el gate vive en algo ejecutable, no en la confianza. Lo que cambia por plan es **dónde** vive ese ejecutable: en el preflight del deploy (free) o también en GitHub (Team).

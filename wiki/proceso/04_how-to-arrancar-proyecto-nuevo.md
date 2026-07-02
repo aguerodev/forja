@@ -4,11 +4,11 @@ titulo: Arrancar un proyecto nuevo
 tipo: how-to
 tier: 1
 audience: both
-resumen: Secuencia lineal para inicializar un proyecto desde cero, de traer la wiki hasta publicar en dev y prod.
+resumen: Secuencia lineal para inicializar un proyecto desde cero, de instalar el plugin forja hasta publicar en dev y prod.
 provides:
-  - "Paso 0 - traer la wiki (primera acción obligatoria)"
+  - "Paso 0 - instalar el plugin forja y correr /forja:init (primera acción obligatoria)"
   - "AGENTS.md / CLAUDE.md como ancla de entrada del agente"
-  - "plantilla del ancla de entrada (wiki/CLAUDE.template.md -> CLAUDE.md raíz)"
+  - "plantilla del ancla (CLAUDE.md instanciado por /forja:init desde la plantilla del plugin)"
   - "mapa de lectura mínima (los cuatro docs para una sesión fresca)"
   - "Strict TDD mode (parámetro de configuración de Gentle AI)"
   - "artifact store = openspec (parámetro de configuración)"
@@ -19,13 +19,13 @@ reads-before: [fund.stack, proc.tdd, proc.sdd]
 related: [ops.exponer-tunnel, ops.desplegar-swarm]
 ---
 
-# Cómo arrancar un proyecto nuevo: de la wiki a producción
+# Cómo arrancar un proyecto nuevo: de la doctrina a producción
 
-Inicializar un proyecto nuevo de principio a fin: desde traer la base de verdad hasta dejar la app publicada en ambos entornos con su dominio. Flujo lineal —cada paso produce un artefacto que alimenta al siguiente— y ningún eslabón puede omitirse sin afectar lo que viene.
+Inicializar un proyecto nuevo de principio a fin: desde instalar el plugin forja —que trae la base de verdad— hasta dejar la app publicada en ambos entornos con su dominio. Flujo lineal —cada paso produce un artefacto que alimenta al siguiente— y ningún eslabón puede omitirse sin afectar lo que viene.
 
 ```
-wiki/  →  docs_sdd/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  src/  →  dev / prod
-  0           1               2                   3                              3           4
+plugin forja  →  software_requirements/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  src/  →  dev / prod
+      0                    1                      2                  3                              3          4
 ```
 
 Este documento es el orquestador del flujo: da el objetivo de cada paso, qué produce y dónde vive el detalle. No repite lo que ya documentan las piezas enlazadas.
@@ -34,15 +34,13 @@ Este documento es el orquestador del flujo: da el objetivo de cada paso, qué pr
 
 ---
 
-## Paso 0 — Traer la wiki
+## Paso 0 — Instalar el plugin forja y correr `/forja:init`
 
-**Objetivo:** establecer la base de verdad antes de cualquier otra acción.
+**Objetivo:** establecer la base de verdad y el andamiaje ejecutable antes de cualquier otra acción.
 
-En un repositorio o carpeta en blanco, el primer movimiento es traer la carpeta `wiki/`. Define el stack de desarrollo, los principios de arquitectura, las normas de operación y el marco metodológico que condiciona todo lo que sigue: requerimientos, diseño e implementación dependen de lo que la wiki declara.
+En un repositorio o carpeta en blanco, el primer movimiento es instalar el plugin **forja** (marketplace `aguerodev/forja`) y correr **`/forja:init`** en la carpeta del proyecto. El comando monta el preflight de herramientas (gentle-ai, engram, gh), el esqueleto ejecutable, Gitflow y el `CLAUDE.md` instanciado. La doctrina **no se copia al proyecto**: viaja dentro del plugin —el stack de desarrollo, los principios de arquitectura, las normas de operación y el marco metodológico que condiciona todo lo que sigue— y se consulta con la skill `forja:doctrina`. Los comandos del operador (`/forja:deploy`, `/forja:rollback`) y las reglas operativas del agente también viven en el plugin: no hay copias por proyecto que mantener sincronizadas.
 
-La wiki trae además las **copias portables de los comandos del operador** (`wiki/operaciones/comandos/deploy.md` y `rollback.md`) y de las **reglas operativas del agente** (`wiki/rules/`): copiá los comandos a `.claude/commands/` del proyecto nuevo —ajustando su bloque "Contexto fijo del proyecto" (stack, context, host)— y las reglas a `.claude/rules/`. Los gates `pnpm check:comandos` y `pnpm check:reglas` mantienen cada par de copias idéntico de ahí en adelante ([Release por comando](../operaciones/08_how-to-pipeline-cicd.md)).
-
-Los skills del flujo (como `spec-doc-interviewer`, el del paso 1) viven en `wiki/skills/` — la wiki los trae consigo. Para que Claude Code los descubra en un proyecto nuevo, enlazá cada skill dentro de `.claude/skills/` con un symlink (`ln -s ../../wiki/skills/<skill> .claude/skills/<skill>`): el contenido queda a la vista en la wiki sin duplicarlo.
+Los skills del flujo (como `spec-doc-interviewer`, el del paso 1) también viajan dentro del plugin: Claude Code los descubre al instalarlo, sin symlinks ni copias.
 
 El stack de desarrollo está en [Stack de desarrollo](../fundamentos/03_referencia-stack-desarrollo.md).
 
@@ -59,19 +57,19 @@ Un agente de IA arranca cada sesión en frío: no carga el repositorio entero ni
 
 Estos cuatro documentos son la lectura mínima para producir código correcto; el resto de la wiki se consulta a demanda desde ellos. El ancla resuelve el hueco entre "la wiki es la base de verdad" y "cómo el agente llega a la wiki".
 
-El ancla no se escribe desde cero: la wiki trae su **plantilla** en [`wiki/CLAUDE.template.md`](../CLAUDE.template.md) — copiala a la raíz como `CLAUDE.md`, completá el bloque «Contexto del proyecto» (app, repo, dominios, servidor) y borrá la nota de plantilla. Dentro de la wiki no se llama `CLAUDE.md` a propósito: Claude Code auto-carga los `CLAUDE.md` de subdirectorios, y una plantilla con placeholders no debe inyectarse como instrucciones reales.
+El ancla no se escribe desde cero: `/forja:init` la instancia en la raíz como `CLAUDE.md` desde la plantilla CLAUDE.md del plugin forja, completando el bloque «Contexto del proyecto» (app, repo, dominios, servidor).
 
-**Produce:** `wiki/` en el repositorio del proyecto y el `AGENTS.md`/`CLAUDE.md` raíz que la indexa.
+**Produce:** el andamiaje del proyecto (preflight, esqueleto, Gitflow) y el `AGENTS.md`/`CLAUDE.md` raíz que indexa la doctrina del plugin.
 
 ---
 
-## Paso 1 — Capturar los requerimientos (`docs_sdd/`)
+## Paso 1 — Capturar los requerimientos (`software_requirements/`)
 
 **Objetivo:** fijar qué construir, para quién y bajo qué reglas, antes de diseñar ni implementar nada.
 
 Corre el skill **`spec-doc-interviewer`**: lanza una entrevista estructurada —volcado libre → preguntas de selección → panel de revisión— y genera los seis documentos de requerimientos junto a sus bitácoras de revisión. El procedimiento completo para generarlos —las cuatro fases, los cuatro tipos de pregunta y el panel de revisión— está en [Generar los documentos de requerimientos](./05_how-to-generar-requerimientos.md); la estructura de la carpeta resultante, en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
 
-**Produce:** `docs_sdd/` con PRD, glosario, SRS, reglas de negocio, modelo de dominio, modelo de datos y `database.dbml`.
+**Produce:** `software_requirements/` con PRD, glosario, catálogo de requisitos, reglas de negocio y modelo de dominio (más el modelo de datos y `database.dbml`, solo en brownfield u orden explícita).
 
 ---
 
@@ -79,11 +77,11 @@ Corre el skill **`spec-doc-interviewer`**: lanza una entrevista estructurada —
 
 **Objetivo:** traducir los requerimientos a una propuesta de interfaz y al **sistema de diseño** del proyecto antes de arrancar la implementación.
 
-**`claude.ai/design`** (la web de Claude) es la herramienta oficial de este paso: con `docs_sdd/` como insumo se genera ahí la propuesta de UI y el sistema de diseño del proyecto. El resultado **se descarga con el comando de export de la propia herramienta** y se guarda en `claude_design/` — no se copia a mano pantalla por pantalla: el export es el artefacto.
+**`claude.ai/design`** (la web de Claude) es la herramienta oficial de este paso: con `software_requirements/` como insumo se genera ahí la propuesta de UI y el sistema de diseño del proyecto. El resultado **se descarga con el comando de export de la propia herramienta** y se guarda en `claude_design/` — no se copia a mano pantalla por pantalla: el export es el artefacto.
 
 Ese artefacto cumple dos roles aguas abajo:
 
-1. **Insumo de Gentle AI** (junto con `docs_sdd/`) para el SDD del paso siguiente.
+1. **Insumo de Gentle AI** (junto con `software_requirements/`) para el SDD del paso siguiente.
 2. **Base del sistema de diseño**: sus decisiones visuales (colores, radios, tipografía) se traducen a las primitivas `--tk-*` del sistema de tokens en dos capas ([Estilos de frontend](../arquitectura/06_explicacion-estilos-frontend.md)); no se copia CSS suelto del export al árbol de componentes.
 
 **Produce:** `claude_design/` con la propuesta de interfaz y el sistema de diseño exportado.
@@ -94,7 +92,7 @@ Ese artefacto cumple dos roles aguas abajo:
 
 **Objetivo:** producir el código a partir de los requerimientos y la propuesta de UI, con especificación explícita de cada cambio antes de implementar.
 
-Los insumos de entrada son `docs_sdd/` **y** `claude_design/`. Gentle AI arranca con `sdd-init` y luego ejecuta el ciclo SDD completo —proposal → spec → design → tasks → apply → verify → archive— para cada cambio.
+Los insumos de entrada son `software_requirements/` **y** `claude_design/`. Gentle AI arranca con `sdd-init` y luego ejecuta el ciclo SDD completo —proposal → spec → design → tasks → apply → verify → archive— para cada cambio.
 
 El esqueleto del repositorio no se escribe a mano: **Plop** genera el proyecto y cada feature con su forma canónica —el hexágono completo de un slice en una sola carpeta bajo `src/features/`—, así el código nace correcto; `pnpm install` deja el entorno reproducible desde `pnpm-lock.yaml`.
 
@@ -110,7 +108,7 @@ El concepto de SDD, la descripción de Gentle AI y la estructura de `openspec/` 
 
 El código generado en `src/` sigue la estructura de módulos del proyecto: vertical slices en `src/features/`, core transversal en `src/core/` y bindings mínimos al framework en `src/app/`. La forma completa del árbol está en [Estructura del repositorio](../arquitectura/02_referencia-estructura-repo.md).
 
-El handoff `docs_sdd/ → openspec/ → src/` queda trazable: cada cambio de `openspec/` declara qué requisitos de `docs_sdd/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice en `src/features/<feature>/` queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
+El handoff `software_requirements/ → openspec/ → src/` queda trazable: cada cambio de `openspec/` declara qué requisitos de `software_requirements/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice en `src/features/<feature>/` queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
 
 Cada cambio se cierra contra el gate único: `pnpm run check` corre todos los controles que bloquean el merge —tipos con `tsc --noEmit`, lint y formato con Biome, pureza con dependency-cruiser y tests con Vitest— y local equivale a CI. El mutation testing con Stryker no es gate de PR: corre como métrica informativa en un job nightly.
 
