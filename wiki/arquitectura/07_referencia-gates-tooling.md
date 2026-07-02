@@ -201,7 +201,7 @@ El dev y CI corren exactamente lo mismo —cero deriva— vía los scripts de `p
     "check": "biome check . && prettier --check \"**/*.tsx\" && tsc --noEmit && depcruise src && vitest run --project unit && pnpm check:migrations && pnpm audit --audit-level=high",
     "fix": "biome check --write . && prettier --write \"**/*.tsx\"",
     "test:integration": "vitest run --project integration",
-    "test:mutation": "stryker run --since origin/main",
+    "test:mutation": "stryker run --incremental",
     "test:contract": "schemathesis run --experimental=openapi-3.1 --base-url http://localhost:3000 --hypothesis-max-examples 25 openapi.json",
     "check:migrations": "node scripts/lint-migrations.mjs src/core/db/migrations"
   }
@@ -243,7 +243,7 @@ Los gates **lentos** NO viven en `check` —correrlos ahí rompería el bucle y 
 
 ## El job de mutation (Stryker): nightly y métrica
 
-El mutation score es una **métrica** informativa de calidad de test, no un gate de merge (la distinción [métrica vs gate](./04_explicacion-testing.md#métrica-vs-gate)): tanto la cobertura como el mutation score son métricas, y ninguna de las dos rompe el PR. El job corre **nightly**, fuera del gate de PR, reporta el score como señal de calidad y **no bloquea el merge**. Corre incremental (`--since`) acotado a los módulos de dominio y servicio tocados respecto de la base, contra el proyecto `unit` de Vitest. En `stryker.conf.json`:
+El mutation score es una **métrica** informativa de calidad de test, no un gate de merge (la distinción [métrica vs gate](./04_explicacion-testing.md#métrica-vs-gate)): tanto la cobertura como el mutation score son métricas, y ninguna de las dos rompe el PR. El job corre **nightly**, fuera del gate de PR, reporta el score como señal de calidad y **no bloquea el merge**. Corre **incremental** (`--incremental`, reutilizando el estado de `reports/stryker-incremental.json`) acotado a los módulos de dominio y servicio tocados, contra el proyecto `unit` de Vitest. En `stryker.conf.json`:
 
 ```json
 {
@@ -258,7 +258,7 @@ El mutation score es una **métrica** informativa de calidad de test, no un gate
 
 - **`mutate`** acota el universo de mutantes a `domain.ts` y `service.ts` —la lógica que el dial declara intocable—; el transporte (route/actions) y los adaptadores no entran al reporte.
 - **`thresholds.break: 100`** es el umbral del **reporte nightly**: cualquier mutante sobreviviente en lo tocado falla el job y deja la señal de calidad en rojo. Vive en `stryker.conf.json` como umbral del reporte, no como condición de integración.
-- **`--since origin/main`** limita a los archivos modificados respecto de la base, para que el reporte sea proporcional al diff y no a todo el repo.
+- **`--incremental`** reutiliza el estado de la corrida anterior (`reports/stryker-incremental.json`) y muta solo lo que cambió desde entonces, para que el reporte sea proporcional al delta y no a todo el repo.
 
 En CI es un job separado, **programado nightly** (no en `pull_request`):
 
@@ -268,12 +268,16 @@ mutation:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
-      with: { fetch-depth: 0 } # --since necesita el historial para comparar con origin/main
+    - uses: actions/cache@v4 # persiste el estado incremental entre corridas nightly
+      with:
+        path: reports/stryker-incremental.json
+        key: stryker-incremental-${{ github.run_id }}
+        restore-keys: stryker-incremental-
     - run: pnpm install --frozen-lockfile
     - run: pnpm test:mutation
 ```
 
-> **El primer PR de un repo greenfield.** Si `--since` no encuentra cambios en `domain.ts`/`service.ts` (porque el diff no toca dominio), no hay mutantes que evaluar y el reporte pasa en vacío —correcto, no hay lógica de dominio que medir. El `fetch-depth: 0` garantiza que `origin/main` exista como base de comparación.
+> **La primera corrida de un repo greenfield.** Si todavía no hay `domain.ts`/`service.ts` con lógica, no hay mutantes que evaluar y el reporte pasa en vacío —correcto, no hay dominio que medir. La primera corrida con dominio real es completa y siembra `reports/stryker-incremental.json`; las siguientes mutan solo el delta.
 
 > **Subir mutation a gate de merge: escalación del dial.** Cablear el `break: 100` como gate bloqueante de cada PR es un **punto del dial**, no el default. El disparador es un **dominio crítico o un equipo maduro** que lo justifique; mientras tanto, un proyecto típico de agencia no necesita esa ceremonia (robusto no es máximo): un mutante equivalente indecidible puede bloquear un PR sano sin aportar señal real. La promoción a gate se anota como escalación deliberada.
 
@@ -481,7 +485,7 @@ contract:
   - Job `contract` — smoke de Schemathesis acotado (25 ejemplos) contra el OpenAPI generado; además aplica las migraciones contra Postgres real y ejecuta el **único `next build` pre-merge** del sistema.
   - El gate de seguridad del PR son las reglas de Biome (código) y `pnpm audit` (dependencias); el análisis estático de seguridad es deliberadamente acotado a esos dos frentes.
 - **Programado / nightly (no bloquea el PR):**
-  - Job `mutation` — `stryker run --since` con `break: 100` sobre el dominio/servicio tocado; sale temprano si `develop` no tiene delta contra `main` (métrica de calidad de test, no gate: ver [El job de mutation](#el-job-de-mutation-stryker-nightly-y-métrica)).
+  - Job `mutation` — `stryker run --incremental` con `break: 100` sobre el dominio/servicio tocado; sale temprano si no hay delta de dominio desde la última corrida (métrica de calidad de test, no gate: ver [El job de mutation](#el-job-de-mutation-stryker-nightly-y-métrica)).
   - Si el dial lo pide: la pasada exhaustiva de Schemathesis (disparador: el primer bug de contrato que el smoke no atrapó) y el análisis de supply chain de `Socket` por encima de `pnpm audit`.
 
 Dos lecciones cableadas en `ci.yml` que la doctrina hereda: `pnpm/action-setup` va **sin** input de versión (lee `packageManager` de `package.json`; declararla dos veces rompe el setup), y el servicio Postgres del job `contract` **debe mapear el puerto** (`5432:5432`) porque `drizzle-kit` corre en el host del runner, no en un contenedor.

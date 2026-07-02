@@ -87,6 +87,11 @@ TARGET="$(cd "${TARGET}" && pwd)"
 # ── 1. Copy the template tree ────────────────────────────────────────────────
 cp -R "${TEMPLATES_DIR}/." "${TARGET}"
 
+# Ship env.example as a dotfile (the template tree cannot carry .env* names).
+if [ -f "${TARGET}/env.example" ]; then
+  mv "${TARGET}/env.example" "${TARGET}/.env.example"
+fi
+
 # ── 2. Copy the infra sources into ops/ ──────────────────────────────────────
 mkdir -p "${TARGET}/ops"
 for f in provision.sh verify.sh user_data.yaml firewall-rules.json; do

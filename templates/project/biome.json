@@ -1,0 +1,44 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/coverage",
+      "!**/reports",
+      "!**/.claude",
+      "!**/ops",
+      "!**/openspec",
+      "!**/software_requirements"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": { "noExplicitAny": "error" }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": { "organizeImports": "on" }
+    }
+  },
+  "css": {
+    "parser": { "tailwindDirectives": true }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/**", "e2e/**"],
+      "linter": {
+        "rules": { "suspicious": { "noExplicitAny": "off" } }
+      }
+    }
+  ]
+}

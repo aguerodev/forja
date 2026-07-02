@@ -1,0 +1,9 @@
+{
+  "app": "{{APP}}",
+  "publicName": "{{PUBLIC_NAME}}",
+  "domain": "{{DOMAIN}}",
+  "dockerContext": "{{APP}}-prod",
+  "github": { "org": "{{GH_ORG}}", "repo": "{{GH_REPO}}" },
+  "db": { "user": "{{DB_USER}}", "name": "{{DB_NAME}}", "pgMajor": "{{PG_MAJOR}}" },
+  "nodeVersion": "{{NODE_VERSION}}"
+}

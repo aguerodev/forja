@@ -1,0 +1,14 @@
+{
+  "includeCoAuthoredBy": false,
+  "extraKnownMarketplaces": {
+    "forja": {
+      "source": {
+        "source": "github",
+        "repo": "{{FORJA_MARKETPLACE_REPO}}"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "forja@forja": true
+  }
+}
