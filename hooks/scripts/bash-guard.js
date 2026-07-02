@@ -282,5 +282,8 @@ function main() {
 try {
   main();
 } catch {
-  // Fail open: a guard bug must never block work.
+  // Fail open: a guard bug must never block work — but never silently either.
+  try {
+    process.stderr.write("forja bash-guard: error interno - comando permitido sin analizar (fail-open)\n");
+  } catch {}
 }
