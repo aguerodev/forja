@@ -23,7 +23,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 - **Guardias activas** (hooks del plugin, no opcionales):
   - Push/commit directo a `main` o `develop` **bloqueado** — todo entra por PR.
   - Atribución de IA en commits **bloqueada** (sin `Co-Authored-By`, sin "Generated with").
-  - `hcloud` crudo **bloqueado** — la infraestructura se gestiona vía `hcloud-agent.sh` (en el PATH), con token read por defecto y break-glass humano para mutaciones.
+  - `hcloud` crudo **bloqueado** — la infraestructura se gestiona vía el wrapper `hcloud-agent.sh` del plugin (`/forja:doctor` muestra su ruta), con token read por defecto y break-glass humano para mutaciones.
 
 ## Flujo: de la idea al deploy
 

@@ -158,7 +158,7 @@ docker -c ${APP}-prod stack ls
 docker -c ${APP}-prod secret ls
 ```
 
-`stack ls` debe mostrar **solo** el stack de producción (5 servicios). `secret ls` debe listar sus secrets prefijados por stack (los 12 que exige `stack.yml`). Repite ambos comandos sin `-c` (context local) para el stack de pruebas.
+`stack ls` debe mostrar **solo** el stack de producción (5 servicios). `secret ls` debe listar sus secrets prefijados por stack (los 7 que exige `stack.yml`; los de features posteriores se suman al llegar). Repite ambos comandos sin `-c` (context local) para el stack de pruebas.
 
 Por último, vuelve a listar los túneles desde la API de Cloudflare: tanto el de producción como el de pruebas deben estar en `healthy`. La cadena está cerrada: ambos dominios sirven, cada uno por su túnel y desde su entorno, sin un solo puerto entrante abierto en el servidor.
 

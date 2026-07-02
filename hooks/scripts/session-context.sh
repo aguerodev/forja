@@ -47,12 +47,16 @@ node -e '
   try {
     const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
     const missing = process.argv[2] || "";
+    const root = process.env.CLAUDE_PLUGIN_ROOT || "";
+    const wrapper = root
+      ? root + "/bin/hcloud-agent.sh"
+      : "el wrapper hcloud-agent.sh del plugin forja (/forja:doctor muestra la ruta)";
     let msg =
       "Proyecto forja: " + c.app + " (" + c.publicName + "." + c.domain + "). " +
       "Doctrina: skill forja:doctrina (recetas por tarea). " +
       "Gitflow: main/develop solo por PR — guardia activa. " +
       "Deploy SOLO con /forja:deploy; estado del equipo con /forja:status. " +
-      "Infra Hetzner: hcloud-agent.sh (en PATH), nunca hcloud crudo.";
+      "Infra Hetzner: usá " + wrapper + " — nunca hcloud crudo.";
     if (missing) msg += " Faltan herramientas: " + missing + " — corré /forja:doctor.";
     if (msg.length > 700) msg = msg.slice(0, 700);
     process.stdout.write(JSON.stringify({

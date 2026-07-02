@@ -95,5 +95,5 @@ Mostrá un resumen de lo creado y los próximos pasos:
 1. Decime **"entrevistame"** → la skill `spec-doc-interviewer` arma la documentación base en `software_requirements/`.
 2. Diseño visual: carpeta `claude_design/` con [claude.ai/design](https://claude.ai/design).
 3. Corré **`/sdd-init`** de gentle-ai (artifact store: `openspec`) para activar el flujo SDD.
-4. Infra cuando toque: carpeta `ops/` + `hcloud-agent.sh` (ya está en el PATH) + skill `forja:doctrina`, receta `operar-servidor`.
+4. Infra cuando toque: carpeta `ops/` + el wrapper `hcloud-agent.sh` del plugin (`/forja:doctor` muestra su ruta exacta) + skill `forja:doctrina`, receta `operar-servidor`.
 5. Primer deploy: **`/forja:deploy preview`**.

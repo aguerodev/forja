@@ -19,7 +19,10 @@ echo "== docker =="; docker version --format '{{.Server.Version}}' || echo "DOCT
 echo "== gentle-ai =="; command -v gentle-ai || echo "DOCTOR_WARN gentle-ai"
 echo "== engram =="; claude mcp list 2>/dev/null | grep -qi engram && echo "engram OK" || echo "DOCTOR_WARN engram"
 echo "== hcloud (opcional, solo infra) =="; command -v hcloud || echo "DOCTOR_INFO hcloud ausente"
+echo "== wrapper infra =="; ls "${CLAUDE_PLUGIN_ROOT}/bin/hcloud-agent.sh" 2>/dev/null || echo "DOCTOR_INFO wrapper en el bin/ del plugin forja"
 ```
+
+La línea del wrapper imprime la **ruta exacta** de `hcloud-agent.sh` — esa es la que se usa para operar infra (nunca `hcloud` crudo; la guardia del plugin lo bloquea).
 
 ## Paso 2 — Conformidad del proyecto (solo si estás parado en un proyecto)
 

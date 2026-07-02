@@ -28,7 +28,7 @@ related: []
 
 Cómo un **agente de IA** gestiona el ciclo de vida del servidor de producción a través de la API de Hetzner (`hcloud`): confirmar-o-crear el nodo idempotentemente, recuperar su IP desde la API, aplicar el Cloud Firewall declarativamente y operar el plano de snapshots del proveedor. Este documento es el **hogar de esa capacidad**; otros docs la referencian pero la doctrina vive acá.
 
-Asume el modelo de un solo nodo descrito en [modelo de operación](./01_explicacion-modelo-operacion.md) y se apoya en artefactos ejecutables que viven en dos lugares: el wrapper `hcloud-agent.sh`, el validador `validate-firewall-rules.sh` y el gate `infra-verify.sh` viven en el `bin/` del plugin forja (quedan en el PATH de la sesión); el ruleset `firewall-rules.json` vive en `ops/` del repo del proyecto — su historial de git es la bitácora de auditoría.
+Asume el modelo de un solo nodo descrito en [modelo de operación](./01_explicacion-modelo-operacion.md) y se apoya en artefactos ejecutables que viven en dos lugares: el wrapper `hcloud-agent.sh`, el validador `validate-firewall-rules.sh` y el gate `infra-verify.sh` viven en el `bin/` del plugin forja (se invocan por su ruta dentro del plugin; `/forja:doctor` la muestra); el ruleset `firewall-rules.json` vive en `ops/` del repo del proyecto — su historial de git es la bitácora de auditoría.
 
 ---
 
@@ -152,8 +152,9 @@ hcloud server enable-protection <id> delete rebuild
 
 ```bash
 # 1. Validar el archivo ANTES de tocar la API (bloquea 0.0.0.0/0 fuera de allowlist,
-#    exige el par v4+v6 y la regla SSH). El validador está en el PATH (bin/ del plugin).
-validate-firewall-rules.sh ops/firewall-rules.json
+#    exige el par v4+v6 y la regla SSH). El validador vive en el bin/ del plugin
+#    forja; invocalo por su ruta (/forja:doctor la muestra).
+<ruta-del-plugin>/bin/validate-firewall-rules.sh ops/firewall-rules.json
 
 # 2. Leer el estado vivo y mostrar el diff (el "plan" de los pobres).
 hcloud firewall describe <fw> -o json > /tmp/fw-live.json
@@ -179,7 +180,7 @@ El agente puede creer que solo previsualiza, pero el wrapper es quien garantiza 
 
 ### El wrapper como único choke-point
 
-`hcloud-agent.sh` —en el `bin/` del plugin forja, en el PATH de la sesión— es la única superficie por la que el agente toca Hetzner. Responsabilidades:
+`hcloud-agent.sh` —en el `bin/` del plugin forja, invocado por su ruta completa— es la única superficie por la que el agente toca Hetzner. Responsabilidades:
 
 - **Allowlist de verbos**: solo deja pasar lo autónomo; niega lo destructivo aunque venga el token R&W.
 - **Token por env var, nunca como argumento**: inyecta `HCLOUD_TOKEN` en el entorno y jamás lo pasa en la línea de comando (aparecería en `ps`/history).

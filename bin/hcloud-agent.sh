@@ -167,7 +167,7 @@ case "${VERB}" in
     ;;
   metrics)
     ID="$(resolve_one_id)"
-    hc server metrics "${ID}" "${PASSTHRU[@]}" -o json
+    hc server metrics "${ID}" ${PASSTHRU[@]+"${PASSTHRU[@]}"} -o json
     ;;
   firewall-describe)
     [[ -n "${FW}" ]] || die "firewall-describe requiere --fw <fw>"
@@ -184,7 +184,7 @@ case "${VERB}" in
          LABEL_ARGS=()
          IFS=',' read -ra _kvs <<< "${SELECTOR}"
          for _kv in "${_kvs[@]}"; do LABEL_ARGS+=(--label "${_kv}"); done
-         hc server create "${LABEL_ARGS[@]}" "${PASSTHRU[@]}" -o json
+         hc server create ${LABEL_ARGS[@]+"${LABEL_ARGS[@]}"} ${PASSTHRU[@]+"${PASSTHRU[@]}"} -o json
          ;;
       1) printf '[hcloud-agent] ya existe 1 server con %s; no se recrea.\n' "${SELECTOR}" >&2
          hc server list -l "${SELECTOR}" -o json
@@ -220,7 +220,7 @@ case "${VERB}" in
     ;;
   change-type)
     ID="$(resolve_one_id)"; audit "change-type" "id=${ID} args=${PASSTHRU[*]}"
-    hc server change-type "${ID}" "${PASSTHRU[@]}"
+    hc server change-type "${ID}" ${PASSTHRU[@]+"${PASSTHRU[@]}"}
     ;;
   delete|rebuild)
     # Llega aca solo con --human-approved, PERO enable-protection deberia

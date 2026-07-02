@@ -165,33 +165,43 @@ else
 fi
 
 # ── Phase 4/5: stack deploy + gated migration ────────────────────────────────
+# Capture the newest migrate task BEFORE deploying: on a redeploy the gate must
+# judge the NEW job task, never the previous release's Complete (task creation
+# is asynchronous to `stack deploy` returning).
+prev_migrate_task="$(dk service ps "${STACK}_migrate" -q 2>/dev/null | head -n 1 || true)"
+
 log "phase 4/5 deploy: docker stack deploy -c stack.yml ${STACK}"
 dk stack deploy -c stack.yml "${STACK}"
 
 # The migrate job result is read from the TASK STATE, never inferred from CLI
 # blocking (a one-shot job never "converges"; doctrine ops/08, verified
-# incident). docker service ps lists the newest task first.
+# incident). docker service ps lists the newest task first; the gate only
+# evaluates a task whose ID differs from the pre-deploy snapshot.
 MIGRATE_TIMEOUT="${MIGRATE_TIMEOUT:-300}"
 log "gating on ${STACK}_migrate task state (timeout ${MIGRATE_TIMEOUT}s)"
 deadline=$(( $(date +%s) + MIGRATE_TIMEOUT ))
 state=""
 while :; do
-  state="$(dk service ps "${STACK}_migrate" --format '{{.CurrentState}}' 2>/dev/null \
-    | head -n 1 | awk '{print $1}' || true)"
-  case "${state}" in
-    Complete)
-      pass "migrate job Complete"
-      break
-      ;;
-    Failed|Rejected)
-      fail_line "migrate job ${state} — last logs:"
-      dk service logs --raw --tail 50 "${STACK}_migrate" >&2 || true
-      fail "migration failed; the pre-migration dump in backups/ is the restore point"
-      ;;
-    *) : ;;  # Pending/Running/Preparing/empty — keep polling
-  esac
+  task_line="$(dk service ps "${STACK}_migrate" --format '{{.ID}} {{.CurrentState}}' 2>/dev/null \
+    | head -n 1 || true)"
+  task_id="${task_line%% *}"
+  if [ -n "${task_id}" ] && [ "${task_id}" != "${prev_migrate_task}" ]; then
+    state="$(printf '%s\n' "${task_line}" | awk '{print $2}')"
+    case "${state}" in
+      Complete)
+        pass "migrate job Complete"
+        break
+        ;;
+      Failed|Rejected)
+        fail_line "migrate job ${state} — last logs:"
+        dk service logs --raw --tail 50 "${STACK}_migrate" >&2 || true
+        fail "migration failed; the pre-migration dump in backups/ is the restore point"
+        ;;
+      *) : ;;  # Pending/Running/Preparing — keep polling
+    esac
+  fi
   if [ "$(date +%s)" -ge "${deadline}" ]; then
-    fail_line "migrate job did not reach Complete within ${MIGRATE_TIMEOUT}s (last state: ${state:-not visible})"
+    fail_line "migrate job did not reach Complete within ${MIGRATE_TIMEOUT}s (last state: ${state:-new task not visible yet})"
     dk service ps "${STACK}_migrate" >&2 || true
     fail "migration gate timed out"
   fi
