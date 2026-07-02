@@ -1,0 +1,192 @@
+# Swarm stack — 5 services on one overlay network (doctrine: wiki ops/01 +
+# ops/06 - load `forja:doctrina`). No inbound ports: cloudflared opens an
+# OUTBOUND connection (egress 7844) and reaches the app at http://app:8000
+# over the overlay — the service name IS the DNS name.
+#
+# Deployed EXCLUSIVELY via deploy.sh, which resolves the docker context per
+# environment and exports the variables this file substitutes at deploy time
+# (`docker stack deploy` substitutes ${VAR} from the calling environment):
+#
+#   STACK          required  stack name `{{APP}}_<env>` (e.g. {{APP}}_prod).
+#                            Every secret object is named `${STACK}_<key>`.
+#   APP_IMAGE      optional  app image ref     (default {{APP}}:latest)
+#   MIGRATE_IMAGE  optional  migrate image ref (default {{APP}}:migrate)
+#   BACKUP_IMAGE   optional  backup image ref  (default {{APP}}:backup)
+#
+# Secrets are external and IMMUTABLE: deploy.sh materializes each key of
+# secrets/<env>.env as `${STACK}_<key>`, only if absent, and asserts all
+# required ones exist before touching the database. The compose key of each
+# secret equals its mount name under /run/secrets/ and the Zod config field:
+# the name IS the contract (wiki ops/07).
+#
+# Expected steady state (docker stack services ${STACK}): app, backup,
+# cloudflared and db at 1/1; migrate is a replicated-job whose terminal state
+# is `0/1 (1/1 completed)` — that is success, not a failure.
+
+# Single node: unbounded json-file logs fill the disk and take down both the
+# app AND Postgres. Every service caps its local log retention.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  app:
+    image: ${APP_IMAGE:-{{APP}}:latest}
+    environment:
+      # server.js reads PORT/HOSTNAME; 8000 must match the tunnel ingress
+      # target (http://app:8000). Fixed here as well as in the image so the
+      # contract is visible where the ingress is wired.
+      PORT: "8000"
+      HOSTNAME: "0.0.0.0"
+    secrets:
+      - db_url
+      - session_secret
+      - app_base_url
+    networks:
+      - backend
+    # No published ports — the ONLY ingress is the tunnel.
+    healthcheck:
+      # Readiness governs the rollback: 200 only if the SELECT 1 against the
+      # pool answers within its timeout (db reachable), 503 otherwise.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 45s # covers the standalone server cold start
+    deploy:
+      replicas: 1
+      update_config:
+        # start-first: the new replica must pass the healthcheck before the
+        # old one goes down — the domain never stops answering.
+        order: start-first
+        failure_action: rollback
+        # monitor MUST exceed start_period + retries x interval (45 + 30 =
+        # 75s), or the rolling update declares victory before an unhealthy
+        # replica can be detected and rollback never fires.
+        monitor: 90s
+    logging: *default-logging
+
+  db:
+    image: postgres:{{PG_MAJOR}}
+    environment:
+      POSTGRES_USER: "{{DB_USER}}"
+      POSTGRES_DB: "{{DB_NAME}}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{DB_USER}} -d {{DB_NAME}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      # Persistence is not hand-replicated in swarm: ONE instance with its
+      # volume, pinned to the manager. The PG major is fixed before the prod
+      # volume exists and never changed hot.
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    logging: *default-logging
+
+  cloudflared:
+    # Pinned tag (supply-chain hygiene, same as CI actions): bump deliberately.
+    image: cloudflare/cloudflared:2025.11.1
+    # Token via --token-file, NEVER as an env var: an env secret shows up in
+    # `docker inspect`; and the official image has no shell to work around it.
+    command: tunnel --no-autoupdate run --token-file /run/secrets/tunnel_token
+    secrets:
+      - tunnel_token
+    networks:
+      - backend
+    # Egress-only (outbound 7844 to the Cloudflare edge): no ports, ever.
+    deploy:
+      replicas: 1
+    logging: *default-logging
+
+  migrate:
+    image: ${MIGRATE_IMAGE:-{{APP}}:migrate}
+    # drizzle.config.ts reads the connection from /run/secrets/db_url.
+    secrets:
+      - db_url
+    networks:
+      - backend
+    deploy:
+      # One-shot job: `docker stack deploy` launches it, deploy.sh polls the
+      # TASK STATE (Complete continues; Failed/Rejected aborts) — the CLI's
+      # convergence behavior is never the arbiter for a one-shot job.
+      mode: replicated-job
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    logging: *default-logging
+
+  backup:
+    image: ${BACKUP_IMAGE:-{{APP}}:backup}
+    environment:
+      # Inputs for scripts/db-backup.sh (doctrine: wiki ops/09). The db host
+      # is the service DNS name on the overlay, never localhost.
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: "{{DB_USER}}"
+      PGDATABASE: "{{DB_NAME}}"
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      BACKUP_KEEP: "7"
+      BACKUP_REMOTE_DIR: backups/${STACK}/daily
+    secrets:
+      - db_password
+      - storage_box_dest
+      - backup_ssh_key_b64
+    volumes:
+      - dbbackups:/backups
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      placement:
+        # Anchored to the manager next to db.
+        constraints:
+          - node.role == manager
+    logging: *default-logging
+
+networks:
+  # Attached services resolve each other by service name (${STACK}_backend).
+  backend:
+    driver: overlay
+
+volumes:
+  pgdata: {}
+  dbbackups: {}
+
+# The 7 required runtime secrets (see secrets/README.md). All external:
+# created by deploy.sh from secrets/<env>.env, immutable, prefixed by stack
+# so two environments sharing this file never share a secret object.
+secrets:
+  db_url:
+    external: true
+    name: ${STACK}_db_url
+  session_secret:
+    external: true
+    name: ${STACK}_session_secret
+  app_base_url:
+    external: true
+    name: ${STACK}_app_base_url
+  db_password:
+    external: true
+    name: ${STACK}_db_password
+  tunnel_token:
+    external: true
+    name: ${STACK}_tunnel_token
+  storage_box_dest:
+    external: true
+    name: ${STACK}_storage_box_dest
+  backup_ssh_key_b64:
+    external: true
+    name: ${STACK}_backup_ssh_key_b64
