@@ -1,0 +1,16 @@
+{
+  "name": "forja",
+  "owner": {
+    "name": "aguerodev"
+  },
+  "metadata": {
+    "description": "Marketplace del plugin forja: doctrina de ingeniería + bootstrap enterprise-grade para desarrollar con gentle-ai + engram"
+  },
+  "plugins": [
+    {
+      "name": "forja",
+      "source": "./",
+      "description": "Doctrina de ingeniería + bootstrap enterprise-grade: wiki, skills, comandos de operador y guardias Gitflow para desarrollar con gentle-ai + engram"
+    }
+  ]
+}

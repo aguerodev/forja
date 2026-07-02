@@ -11,10 +11,10 @@
 #
 # Filosofia (igual que verify.sh): la verdad vive en el script, no en la prosa.
 # Abrir el borde es tan peligroso como borrar; por eso el control es un exit
-# code, no un parrafo. Ver operaciones/12_how-to-gestionar-infra-via-api.md.
+# code, no un parrafo. Ver wiki/operaciones/12_how-to-gestionar-infra-via-api.md.
 #
-# Uso:
-#   ./validate-firewall-rules.sh [ruta/al/firewall-rules.json]
+# Uso (desde la raiz del proyecto; el ruleset vive en ops/):
+#   ./validate-firewall-rules.sh [ruta/al/firewall-rules.json]   # default: ops/firewall-rules.json
 #   ALLOW_WORLD_PORTS="22" ./validate-firewall-rules.sh
 #
 # La allowlist es deliberadamente minima: solo SSH. Ampliarla exige editar
@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-RULES_FILE="${1:-$(dirname "$0")/firewall-rules.json}"
+RULES_FILE="${1:-ops/firewall-rules.json}"
 
 # Puertos que SI pueden quedar expuestos a 0.0.0.0/0 + ::/0 (separados por coma).
 # Default: solo 22 (SSH). El borde real entra por Cloudflare Tunnel saliente,

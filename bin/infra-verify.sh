@@ -13,16 +13,21 @@
 #   - 22/tcp no esta abierto en v4 Y v6, o hay algo MAS inbound abierto al mundo,
 #   - el backup del proveedor no esta habilitado,
 #   - enable-protection delete+rebuild no esta activa,
-#   - el ultimo snapshot restic off-site no es fresco.
+#   - el ultimo backup off-site no es fresco (restic o Storage Box, segun config;
+#     sin config de off-site queda en WARN, no cuenta como FAIL).
 #
-# Solo LECTURA: corre con el token READ y con `restic snapshots`. No muta nada.
+# Solo LECTURA: corre con el token READ. No muta nada.
 #
-# Uso:
+# Uso (desde la raiz del proyecto; el ruleset vive en ops/):
 #   HCLOUD_TOKEN=<read> \
-#   HCLOUD_SELECTOR=managed-by=agent,project=<app>,env=<env> \
-#   FW=<fw> RULES_FILE=operaciones/firewall-rules.json \
+#   HCLOUD_SELECTOR=managed-by=agent,app=<app>,env=<env> \
+#   FW=<fw> RULES_FILE=ops/firewall-rules.json \
 #   RESTIC_REPOSITORY=... RESTIC_PASSWORD_FILE=... \
 #   ./infra-verify.sh
+#
+# Frescura off-site sin restic (dumps diarios al Storage Box por SFTP):
+#   STORAGE_BOX_DEST=<user@host> BACKUP_SSH_KEY=<ruta-clave> STACK=<stack> \
+#   ./infra-verify.sh   # mira el archivo mas nuevo de backups/<stack>/daily/
 
 set -uo pipefail   # NO -e: corremos TODOS los chequeos y contamos fallos.
 
@@ -30,13 +35,14 @@ set -uo pipefail   # NO -e: corremos TODOS los chequeos y contamos fallos.
 : "${HCLOUD_TOKEN:?Falta HCLOUD_TOKEN (token READ) en el entorno}"
 SELECTOR="${HCLOUD_SELECTOR:-managed-by=agent}"
 FW="${FW:?Falta FW=<firewall> a verificar}"
-RULES_FILE="${RULES_FILE:-$(dirname "$0")/firewall-rules.json}"
+RULES_FILE="${RULES_FILE:-ops/firewall-rules.json}"
 MAX_SNAPSHOT_AGE_H="${MAX_SNAPSHOT_AGE_H:-26}"   # ventana de frescura del backup diario
 export HCLOUD_TOKEN
 
 FAILS=0
 pass() { printf '  \033[1;32mPASS\033[0m  %s\n' "$*"; }
 fail() { printf '  \033[1;31mFAIL\033[0m  %s\n' "$*"; FAILS=$((FAILS + 1)); }
+warn() { printf '  \033[1;33mWARN\033[0m  %s\n' "$*"; }
 sect() { printf '\n\033[1;34m== %s\033[0m\n' "$*"; }
 
 command -v jq      >/dev/null 2>&1 || { echo "Falta jq (requerido)."; exit 255; }
@@ -124,25 +130,75 @@ else
   while IFS= read -r e; do fail "inbound al mundo prohibido abierto -> ${e}"; done <<< "${EXTRA_OPEN}"
 fi
 
-# ── 7. Snapshot restic FRESCO (RPO de negocio, off-site) ────────────────────
-sect "Backup restic off-site (frescura)"
-if command -v restic >/dev/null 2>&1 && [[ -n "${RESTIC_REPOSITORY:-}" ]]; then
-  LATEST="$(restic snapshots --json --latest 1 2>/dev/null \
-            | jq -r 'sort_by(.time) | last | .time // empty')"
-  if [[ -n "${LATEST}" ]]; then
-    LATEST_EPOCH="$(date -j -f '%Y-%m-%dT%H:%M:%S' "${LATEST%%.*}" +%s 2>/dev/null \
-                    || date -d "${LATEST}" +%s 2>/dev/null || echo 0)"
-    AGE_H=$(( ( $(date +%s) - LATEST_EPOCH ) / 3600 ))
-    if [[ "${LATEST_EPOCH}" -gt 0 && "${AGE_H}" -le "${MAX_SNAPSHOT_AGE_H}" ]]; then
-      pass "ultimo snapshot restic hace ${AGE_H}h (<= ${MAX_SNAPSHOT_AGE_H}h)"
-    else
-      fail "snapshot restic NO fresco: ${AGE_H}h (> ${MAX_SNAPSHOT_AGE_H}h)"
+# ── 7. Backup off-site FRESCO (RPO de negocio) ──────────────────────────────
+# Freshness dial: restic when RESTIC_REPOSITORY is set; otherwise the daily
+# dumps on the Storage Box (SFTP listing of backups/<stack>/daily/); with no
+# off-site config at all this is a WARN, not a FAIL.
+sect "Backup off-site (frescura)"
+
+# Converts an `ls -l` date ("Mon DD HH:MM" current-year form, or "Mon DD YYYY")
+# to epoch seconds; prints 0 when unparsable. Tries BSD date, then GNU date.
+ls_date_to_epoch() {
+  local mon="$1" day="$2" t="$3" y e now
+  now="$(date +%s)"
+  if [[ "${t}" == *:* ]]; then
+    y="$(date +%Y)"
+    e="$(date -j -f '%b %d %H:%M %Y' "${mon} ${day} ${t} ${y}" +%s 2>/dev/null \
+         || date -d "${mon} ${day} ${t} ${y}" +%s 2>/dev/null || echo 0)"
+    # A yearless listing can land "in the future" across a year boundary.
+    if [[ "${e}" -gt $(( now + 86400 )) ]]; then
+      e="$(date -j -f '%b %d %H:%M %Y' "${mon} ${day} ${t} $(( y - 1 ))" +%s 2>/dev/null \
+           || date -d "${mon} ${day} ${t} $(( y - 1 ))" +%s 2>/dev/null || echo 0)"
     fi
   else
-    fail "no se pudo leer ningun snapshot restic (repo vacio o inaccesible)"
+    e="$(date -j -f '%b %d %Y' "${mon} ${day} ${t}" +%s 2>/dev/null \
+         || date -d "${mon} ${day} ${t}" +%s 2>/dev/null || echo 0)"
+  fi
+  printf '%s' "${e}"
+}
+
+if [[ -n "${RESTIC_REPOSITORY:-}" ]]; then
+  if command -v restic >/dev/null 2>&1; then
+    LATEST="$(restic snapshots --json --latest 1 2>/dev/null \
+              | jq -r 'sort_by(.time) | last | .time // empty')"
+    if [[ -n "${LATEST}" ]]; then
+      LATEST_EPOCH="$(date -j -f '%Y-%m-%dT%H:%M:%S' "${LATEST%%.*}" +%s 2>/dev/null \
+                      || date -d "${LATEST}" +%s 2>/dev/null || echo 0)"
+      AGE_H=$(( ( $(date +%s) - LATEST_EPOCH ) / 3600 ))
+      if [[ "${LATEST_EPOCH}" -gt 0 && "${AGE_H}" -le "${MAX_SNAPSHOT_AGE_H}" ]]; then
+        pass "ultimo snapshot restic hace ${AGE_H}h (<= ${MAX_SNAPSHOT_AGE_H}h)"
+      else
+        fail "snapshot restic NO fresco: ${AGE_H}h (> ${MAX_SNAPSHOT_AGE_H}h)"
+      fi
+    else
+      fail "no se pudo leer ningun snapshot restic (repo vacio o inaccesible)"
+    fi
+  else
+    fail "RESTIC_REPOSITORY definido pero restic no esta instalado"
+  fi
+elif [[ -n "${STORAGE_BOX_DEST:-}" && -n "${BACKUP_SSH_KEY:-}" && -n "${STACK:-}" ]]; then
+  # Newest file in backups/<stack>/daily/ on the Storage Box (SFTP, port 23).
+  LISTING="$(printf 'ls -l backups/%s/daily/\n' "${STACK}" \
+    | sftp -q -b - -P 23 -i "${BACKUP_SSH_KEY}" -o BatchMode=yes "${STORAGE_BOX_DEST}" 2>/dev/null || true)"
+  LATEST_EPOCH=0
+  LATEST_NAME=""
+  while read -r mon day t name; do
+    [[ -n "${name:-}" ]] || continue
+    e="$(ls_date_to_epoch "${mon}" "${day}" "${t}")"
+    if [[ "${e}" -gt "${LATEST_EPOCH}" ]]; then LATEST_EPOCH="${e}"; LATEST_NAME="${name}"; fi
+  done < <(printf '%s\n' "${LISTING}" | awk '/^-/ { print $6, $7, $8, $9 }')
+  if [[ "${LATEST_EPOCH}" -eq 0 ]]; then
+    fail "no se pudo listar backups/${STACK}/daily/ en el Storage Box (SFTP puerto 23)"
+  else
+    AGE_H=$(( ( $(date +%s) - LATEST_EPOCH ) / 3600 ))
+    if [[ "${AGE_H}" -le "${MAX_SNAPSHOT_AGE_H}" ]]; then
+      pass "ultimo dump off-site '${LATEST_NAME}' hace ${AGE_H}h (<= ${MAX_SNAPSHOT_AGE_H}h)"
+    else
+      fail "dump off-site NO fresco: '${LATEST_NAME}' hace ${AGE_H}h (> ${MAX_SNAPSHOT_AGE_H}h)"
+    fi
   fi
 else
-  fail "restic no disponible o RESTIC_REPOSITORY sin definir (no se valida RPO off-site)"
+  warn "frescura off-site no verificada (configurá STORAGE_BOX_DEST+BACKUP_SSH_KEY o RESTIC_REPOSITORY)"
 fi
 
 # ── Resumen ─────────────────────────────────────────────────────────────────

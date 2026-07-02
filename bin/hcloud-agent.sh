@@ -22,8 +22,8 @@
 #
 # Uso:
 #   HCLOUD_TOKEN=... ./hcloud-agent.sh <verbo> [--selector k=v,...] [args]
-#   ./hcloud-agent.sh list   --selector managed-by=agent,project=<app>,env=<env>
-#   ./hcloud-agent.sh ip     --selector managed-by=agent,project=<app>
+#   ./hcloud-agent.sh list   --selector managed-by=agent,app=<app>,env=<env>
+#   ./hcloud-agent.sh ip     --selector managed-by=agent,app=<app>
 #   ./hcloud-agent.sh create-if-not-exists --selector ... -- <args-create-hcloud>
 #   ./hcloud-agent.sh firewall-replace --human-approved --fw <fw> --rules-file <f>
 #

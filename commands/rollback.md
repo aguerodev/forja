@@ -4,9 +4,26 @@ argument-hint: preview | production
 disable-model-invocation: true
 ---
 
-# /rollback $ARGUMENTS
+# /forja:rollback $ARGUMENTS
 
 Volvés la app a una versión anteriormente desplegada y SANA. Scripts deterministas en `scripts/release/`; vos solo orquestás y pedís las confirmaciones. Si `$ARGUMENTS` está vacío, preguntá: ¿preview o production?
+
+## Contexto del proyecto (SIEMPRE primero)
+
+Leé `.forja.json` en la raíz del repo. Si NO existe → decile al usuario que corra `/forja:init` (o cree `.forja.json` a mano) y **PARÁ acá**.
+
+```bash
+node -e '
+const c = JSON.parse(require("fs").readFileSync(".forja.json", "utf8"));
+console.log("STACK_TEST=" + c.app + "_test");
+console.log("STACK_PROD=" + c.app + "_prod");
+console.log("DOCKER_CONTEXT=" + c.dockerContext);
+console.log("DB_USER=" + c.db.user);
+console.log("DB_NAME=" + c.db.name);
+'
+```
+
+Los bloques de abajo usan `$STACK_PROD`, `$DOCKER_CONTEXT`, `$DB_USER`, `$DB_NAME` como marcadores — **sustituilos por los valores derivados** al ejecutar.
 
 ## Paso 1 — Listar versiones
 
@@ -28,7 +45,7 @@ bash scripts/release/rollback-to.sh $ARGUMENTS <tag-elegido>
 ```
 
 - Exit 0 → el script ya verificó health y muestra el build SHA corriendo.
-- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker [-c myapp-prod] stack ps <stack>`.
+- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker [-c $DOCKER_CONTEXT] stack ps <stack>`.
 
 ## Volver a la última versión
 
@@ -38,7 +55,7 @@ Cuando el usuario quiera regresar a la versión más reciente (deshacer el rollb
 bash scripts/release/rollback-to.sh $ARGUMENTS latest
 ```
 
-Y recordá: **el próximo `/deploy` también supera cualquier rollback** — un rollback es un puente mientras se corrige, no un estado permanente.
+Y recordá: **el próximo `/forja:deploy` también supera cualquier rollback** — un rollback es un puente mientras se corrige, no un estado permanente.
 
 ## Plano datos (SOLO production, DESTRUCTIVO, human-confirmed)
 
@@ -49,8 +66,10 @@ Restaurar el dump pre-migración BORRA todo lo escrito después de ese dump. Sol
 3. Rollback del software primero (arriba), luego:
 
 ```bash
-db_cid=$(docker -c myapp-prod ps --filter "label=com.docker.swarm.service.name=app_shorter_prod_db" --format '{{.ID}}' | head -1)
-docker -c myapp-prod exec -i "$db_cid" pg_restore -U app -d app_shorter --clean --if-exists < backups/<dump-pre-migracion>.dump
+db_cid=$(docker -c $DOCKER_CONTEXT ps --filter "label=com.docker.swarm.service.name=${STACK_PROD}_db" --format '{{.ID}}' | head -1)
+docker -c $DOCKER_CONTEXT exec -i "$db_cid" pg_restore -U $DB_USER -d $DB_NAME --clean --if-exists < backups/<dump-pre-migracion>.dump
 ```
 
 4. Re-verificar: `EXPECTED_SHA=<sha-corriendo> bash scripts/release/verify.sh` + smoke.
+
+Al cerrar cualquier rollback: guardá el evento en memoria (engram) — versión desde/hacia, motivo y próximos pasos.
