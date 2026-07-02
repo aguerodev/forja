@@ -15,5 +15,8 @@ secrets/*.env
 # operations
 backups/
 
+# engram team memory: chunks + manifest ARE committed; the local DB is not
+.engram/engram.db*
+
 # os noise
 .DS_Store

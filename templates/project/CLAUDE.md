@@ -47,9 +47,18 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 ## Preferencias de proceso (gentle-ai / SDD)
 
 - **Artifact store: `openspec`.** Los artefactos SDD (proposal, spec, design, tasks) viven como archivos en `openspec/` — committeables, con historial git, compartibles con el equipo. **NO usar engram como store de artefactos SDD.**
-- **Engram = memoria personal del developer, SIEMPRE activa.** Guardá decisiones, bugs con causa raíz, convenciones y descubrimientos proactivamente. Pero lo que el EQUIPO necesita compartir va en artefactos versionados (openspec, wiki del repo, PRs), no en la memoria de una sola persona.
+- **Engram SIEMPRE activo.** Guardá decisiones, bugs con causa raíz, convenciones y descubrimientos proactivamente — y compartilos con el equipo vía git sync (ver «Memoria de equipo»).
 - **Modo de ejecución: AUTOMÁTICO (`auto-chain`).** Encadená las fases SDD sin pausar; el gatekeeper valida cada fase antes de la siguiente. No pares hasta tener la versión lista para probar en dev — interrumpí solo ante un bloqueo real o una decisión de negocio que no podés resolver.
 - **TDD estricto.** El test rojo va primero; el runner es `pnpm test:unit` (proyecto `unit` de Vitest, sin I/O).
+
+## Memoria de equipo (engram)
+
+- **La memoria de engram es del PROYECTO y viaja por git.** `.engram/manifest.json` + `.engram/chunks/` se commitean; la DB local (`.engram/engram.db`) está gitignoreada. Los chunks son content-hashed e inmutables — dos devs exportan en paralelo sin pisarse. El ÚNICO archivo que puede conflictuar en un merge es `manifest.json`: se resuelve con la **unión de ambas listas de chunks**, JAMÁS con "ours"/"theirs" — el import se guía solo por el manifest, así que descartar una entrada borra memoria del equipo en silencio.
+- **Al arrancar la sesión** el hook de forja corre `engram sync --import` — recibís automáticamente el conocimiento que el equipo commiteó.
+- **Al cerrar una unidad de trabajo**: guardá lo aprendido (`mem_save`), corré `engram sync` y commiteá `.engram/` junto con el código. El conocimiento viaja en el mismo PR que lo produjo.
+- **Idioma: español.** La búsqueda de engram (FTS5) no cruza idiomas — las memorias de scope `project` se escriben en español, el idioma del equipo, o nadie las encuentra.
+- **El sync exporta TODO el proyecto, scope `personal` incluido.** Notas verdaderamente personales van en un proyecto engram separado (p. ej. `<tu-usuario>-notes`), nunca en este. Un secreto dentro de una observación se envuelve en `<private>…</private>` — engram lo redacta a `[REDACTED]` antes de guardar.
+- La memoria **complementa** los artefactos versionados (openspec, requerimientos, wiki): registra el porqué y los gotchas; los artefactos siguen siendo la fuente de verdad.
 
 ## Colaboración multi-dev
 

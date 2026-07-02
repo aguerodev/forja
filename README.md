@@ -18,6 +18,7 @@ En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el m
 - **La doctrina completa** (`wiki/`, 4 tiers) consultable por recetas vía la skill `forja:doctrina` — nunca se lee entera.
 - **Guardias activas** (hooks): en repos con `.forja.json` se bloquean commits/pushes directos a `main`/`develop`, la atribución de IA en commits y el uso crudo de la CLI de Hetzner. Fuera de proyectos forja, los hooks no hacen nada.
 - **Contexto de sesión**: al abrir una sesión en un proyecto forja, el agente recibe un resumen del proyecto y sus reglas.
+- **Memoria de equipo (engram git sync)**: la memoria del proyecto viaja por git — `.engram/` lleva los chunks committeados; al abrir sesión el hook corre `engram sync --import` (recibís lo del equipo) y al cerrar cada unidad de trabajo se corre `engram sync` y se commitea `.engram/` junto con el código. La DB local nunca entra al repo.
 - **Scripts de infra en el PATH** (`bin/`): `hcloud-agent.sh` (wrapper con allowlist y auditoría), `validate-firewall-rules.sh`, `infra-verify.sh`.
 
 ## Comandos

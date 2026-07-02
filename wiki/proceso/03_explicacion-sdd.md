@@ -14,6 +14,7 @@ provides:
   - "deriva del agente"
   - "Gentle AI"
   - "Engram"
+  - "memoria de equipo (engram git sync: chunks versionados en .engram/, import al abrir sesión, sync + commit al cerrar la unidad de trabajo)"
   - "modelo distinto por fase"
   - "sdd-init"
   - "cadena de artefactos software_requirements/ -> claude_design/ -> openspec/"
@@ -126,7 +127,7 @@ Gentle AI es un **configurador de ecosistema** sobre el agente de IA (por ejempl
 
 ### Qué añade sobre el agente
 
-- **Memoria persistente (Engram).** Registra decisiones y bugs entre sesiones, de modo que el conocimiento no se pierde al cerrar una conversación. Es memoria **personal** de cada developer —local a su máquina—, nunca el canal de coordinación del equipo: lo compartido vive en artefactos versionados (`software_requirements/`, `openspec/`, la doctrina).
+- **Memoria persistente (Engram).** Registra decisiones y bugs entre sesiones, de modo que el conocimiento no se pierde al cerrar una conversación. Y es memoria **del proyecto, compartida por git**: `engram sync` exporta las memorias nuevas como chunks versionados en `.engram/` (content-hashed e inmutables: dos devs exportan en paralelo sin pisarse; si `manifest.json` conflictúa en un merge se resuelve uniendo ambas listas de chunks — nunca descartando entradas, porque el import se guía solo por el manifest) y cada sesión arranca importando los del resto del equipo (`engram sync --import`; el hook de forja lo corre solo). El ciclo operativo —sync + commit de `.engram/` al cerrar cada unidad de trabajo, idioma español para las memorias de proyecto, qué NO va ahí— vive en el `CLAUDE.md` del proyecto («Memoria de equipo (engram)»). La memoria no reemplaza a los artefactos: los requisitos y specs siguen en `software_requirements/` y `openspec/`; los chunks aportan el porqué, los gotchas y las decisiones que los artefactos no capturan.
 - **Un flujo de Spec-Driven Development** con un **orquestador delgado** y **sub-agentes especializados por fase**: la conducción queda arriba y el trabajo de cada fase en su sub-agente.
 - **Skills curadas.** Capacidades reutilizables que el agente aplica de forma uniforme entre features.
 - **Modelo distinto por fase.** Permite asignar un modelo potente para diseñar, uno rápido para implementar y uno barato para explorar, según lo que cada fase exige.
