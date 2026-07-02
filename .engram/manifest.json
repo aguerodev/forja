@@ -8,6 +8,14 @@
       "sessions": 3,
       "memories": 15,
       "prompts": 7
+    },
+    {
+      "id": "277bc877",
+      "created_by": "aguero_pen",
+      "created_at": "2026-07-02T23:14:16Z",
+      "sessions": 0,
+      "memories": 2,
+      "prompts": 0
     }
   ]
 }
