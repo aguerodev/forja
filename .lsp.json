@@ -1,0 +1,45 @@
+{
+  "typescript": {
+    "command": "typescript-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".ts": "typescript",
+      ".tsx": "typescriptreact",
+      ".js": "javascript",
+      ".jsx": "javascriptreact",
+      ".mjs": "javascript",
+      ".cjs": "javascript"
+    }
+  },
+  "tailwindcss": {
+    "command": "tailwindcss-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".css": "css"
+    }
+  },
+  "bash": {
+    "command": "bash-language-server",
+    "args": ["start"],
+    "extensionToLanguage": {
+      ".sh": "shellscript",
+      ".bash": "shellscript"
+    }
+  },
+  "docker": {
+    "command": "docker-langserver",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      "Dockerfile": "dockerfile",
+      ".dockerfile": "dockerfile"
+    }
+  },
+  "yaml": {
+    "command": "yaml-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".yml": "yaml",
+      ".yaml": "yaml"
+    }
+  }
+}

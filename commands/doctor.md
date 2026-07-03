@@ -21,6 +21,10 @@ echo "== engram MCP =="; claude mcp list 2>/dev/null | grep -qi engram && echo "
 echo "== engram CLI =="; command -v engram || echo "DOCTOR_WARN engram-cli (sin binario no hay memoria de equipo)"
 echo "== hcloud (opcional, solo infra) =="; command -v hcloud || echo "DOCTOR_INFO hcloud ausente"
 echo "== wrapper infra =="; ls "${CLAUDE_PLUGIN_ROOT}/bin/hcloud-agent.sh" 2>/dev/null || echo "DOCTOR_INFO wrapper en el bin/ del plugin forja"
+echo "== LSP servers (opcional, inteligencia de código) =="
+for s in typescript-language-server tailwindcss-language-server bash-language-server docker-langserver yaml-language-server; do
+  command -v "$s" >/dev/null 2>&1 && echo "  $s OK" || echo "DOCTOR_INFO lsp $s ausente"
+done
 ```
 
 La línea del wrapper imprime la **ruta exacta** de `hcloud-agent.sh` — esa es la que se usa para operar infra (nunca `hcloud` crudo; la guardia del plugin lo bloquea).
@@ -62,6 +66,7 @@ Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y co
 - falta develop → `git branch develop && git push -u origin develop`.
 - `forja.devUser` sin setear → capturá primero y seteá solo si no está vacío: `L="$(gh api user -q .login 2>/dev/null | tr '[:upper:]' '[:lower:]')"; [ -n "$L" ] && git config --local forja.devUser "$L"` — define el hostname de TU preview (solo minúsculas, dígitos y guiones).
 - requerimientos sin `openspec/` → si el SDD ya arrancó, el artifact store quedó en engram por error: re-corré `sdd-init` eligiendo `openspec` (doctrina del equipo) para que los artefactos viajen en los PRs.
+- LSP ausente (opcional) → `pnpm add -g typescript-language-server typescript @tailwindcss/language-server bash-language-server dockerfile-language-server-nodejs yaml-language-server`. forja ya trae la config LSP (`.lsp.json`); solo faltan los binarios en el PATH para que Claude Code tenga inteligencia de código del stack.
 
 Cerrá con un veredicto de una línea: "listo para trabajar" o "arreglá X antes de seguir".
 
