@@ -64,3 +64,5 @@ Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y co
 - requerimientos sin `openspec/` → si el SDD ya arrancó, el artifact store quedó en engram por error: re-corré `sdd-init` eligiendo `openspec` (doctrina del equipo) para que los artefactos viajen en los PRs.
 
 Cerrá con un veredicto de una línea: "listo para trabajar" o "arreglá X antes de seguir".
+
+Si durante el diagnóstico detectás que un flujo del propio plugin forja falló (un script que no debería fallar, un hook degradado, un comando que abortó), ofrecé reportarlo con la skill `report-failure`: junta el diagnóstico real (versión de Claude Code, SO, versión del plugin), redacta datos sensibles y abre el issue SOLO con confirmación del usuario. Es el canal de mejora continua del plugin; nunca lo dispares automáticamente.

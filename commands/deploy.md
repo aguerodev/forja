@@ -84,6 +84,7 @@ PUSH_TAG=1 bash scripts/release/tag-release.sh   # tag git vX.Y.Z + push a origi
 
 - **Recuperación inmediata**: correr `/forja:rollback production` (vuelve a una versión anterior sana, código solamente; se regresa con `rollback-to.sh production latest`).
 - **Plano datos** (migración que corrompió esquema/datos): DESTRUCTIVO — ver la sección de restore de `/forja:rollback`; exige la confirmación literal `restaurar datos`.
+- **Reportar el fallo** (mejora continua): si el fallo fue del propio flujo forja (script que no debería fallar, fase colgada, error inesperado), ofrecé abrir un reporte con la skill `report-failure` — junta el diagnóstico real, redacta datos sensibles y crea el issue SOLO con confirmación del usuario. Nunca automático.
 
 ## Reglas duras
 
