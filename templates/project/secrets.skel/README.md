@@ -19,9 +19,9 @@ build placeholder in the Dockerfile builder stage.
 | --- | --- | --- |
 | `db_url` | `app` (config), `migrate` (drizzle) | `postgres://{{DB_USER}}:<db_password>@db:5432/{{DB_NAME}}` — the host is the service DNS name `db`, never localhost; user, database and password must match the `db` service values. |
 | `session_secret` | `app` (config) | Random, at least 32 chars. |
-| `app_base_url` | `app` (config) | Prod: `https://{{PUBLIC_NAME}}.{{DOMAIN}}`. Test: `https://dev-{{PUBLIC_NAME}}.{{DOMAIN}}`. |
+| `app_base_url` | `app` (config) | Prod: `https://{{PUBLIC_NAME}}.{{DOMAIN}}`. Test: `https://<dev>-{{PUBLIC_NAME}}.{{DOMAIN}}` where `<dev>` is your `git config forja.devUser` (fallback `dev`) — it must match the hostname of YOUR tunnel. |
 | `db_password` | `db` (`POSTGRES_PASSWORD_FILE`), `backup` | Must equal the password embedded in `db_url`. |
-| `tunnel_token` | `cloudflared` (`--token-file`) | From the Cloudflare Tunnel provisioning (one token per environment; one tunnel = one connector). |
+| `tunnel_token` | `cloudflared` (`--token-file`) | From the Cloudflare Tunnel provisioning. One token per environment — and in test, per DEVELOPER: each dev provisions their own tunnel (`<app>-test-<dev>`) and keeps its token in their local `secrets/test.env`. One tunnel = one connector. |
 | `storage_box_dest` | `backup` | `uNNNNNN@uNNNNNN.your-storagebox.de` — Hetzner Storage Box SFTP destination (port 23; lives OUTSIDE the prod cloud project). |
 | `backup_ssh_key_b64` | `backup` | Base64-encoded ed25519 PRIVATE key dedicated to the sidecar (base64 because a multiline value does not survive the `.env` line format). Only uploads/rotates dumps; never grants node access. |
 

@@ -10,7 +10,7 @@ provides:
   - ausencia deliberada de staging (es una decisión, no un olvido)
   - staging riel (ENV=test precableado en deploy.sh, off por defecto; el pipeline vive en ops.pipeline-cicd)
   - distinción APP vs PUBLIC_NAME (APP = slug de stack/imagen; PUBLIC_NAME = label DNS público; un '_' en un hostname es inválido)
-  - convención de hostnames por entorno (${PUBLIC_NAME}.<dominio> prod; dev-${PUBLIC_NAME}.<dominio> test)
+  - convención de hostnames por entorno (${PUBLIC_NAME}.<dominio> prod; <dev>-${PUBLIC_NAME}.<dominio> test, con <dev> = git config forja.devUser, fallback dev)
   - patrón de nombre de stack ${APP}_<env>
   - docker context de prod fijado en deploy.sh (${APP}-prod); test neutraliza DOCKER_CONTEXT y usa el contexto local
   - Dockerfile multi-stage (base / deps / builder / runner / migrator / backup)
@@ -38,7 +38,7 @@ Entornos que el proyecto despliega e imágenes Docker que los sirven. La topolog
 
 El proyecto define **dos entornos activos**: `dev` (local) y `prod` (server).
 
-- **dev = el loop de desarrollo, no infraestructura.** El dev server de Next (`pnpm dev`, hot reload) contra `localhost:3000`, leyendo `.env` y los secretos dev-local (ver [Bootstrap local](#bootstrap-local)). Si se necesita **tráfico entrante** con dominio real (webhooks, OAuth, compartir un preview), el riel `ENV=test` de `deploy.sh` despliega el stack completo en el Swarm local, expuesto como `dev-${PUBLIC_NAME}.<dominio>`.
+- **dev = el loop de desarrollo, no infraestructura.** El dev server de Next (`pnpm dev`, hot reload) contra `localhost:3000`, leyendo `.env` y los secretos dev-local (ver [Bootstrap local](#bootstrap-local)). Si se necesita **tráfico entrante** con dominio real (webhooks, OAuth, compartir un preview), el riel `ENV=test` de `deploy.sh` despliega el stack completo en el Swarm local, expuesto como `<dev>-${PUBLIC_NAME}.<dominio>` — un hostname **por developer** (el label sale de `git config forja.devUser`, fallback `dev`), para que dos personas puedan levantar su preview a la vez sin pisarse.
 - **prod = el stack en Swarm.** Corre como Docker Stack en el nodo de producción, expuesto por su dominio público vía Cloudflare Tunnel, con backups.
 
 ### Ausencia deliberada de staging
@@ -57,7 +57,7 @@ El **riel de staging queda precableado pero apagado**: `deploy.sh` acepta `ENV=t
 | Entorno | Hostname público | Stack | Docker context |
 |---|---|---|---|
 | prod | `${PUBLIC_NAME}.<dominio>` | `${APP}_prod` | `${APP}-prod` (fijado en `deploy.sh`) |
-| test (riel local) | `dev-${PUBLIC_NAME}.<dominio>` | `${APP}_test` | — (contexto local activo) |
+| test (riel local, por developer) | `<dev>-${PUBLIC_NAME}.<dominio>` | `${APP}_test` | — (contexto local activo) |
 
 - **Patrón de nombre de stack:** `${APP}_<env>` (p. ej. `${APP}_prod`).
 - En `ENV=test`, `deploy.sh` **neutraliza** cualquier `DOCKER_CONTEXT` heredado: un deploy de test nunca puede redirigirse al nodo de producción.

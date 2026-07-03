@@ -10,7 +10,7 @@ provides:
   - "elección de docker context por entorno (prod vía context/alias SSH ${APP}-prod; test con DOCKER_CONTEXT neutralizado)"
   - "comandos de verificación del stack (stack ls / stack services / secret ls)"
   - "transición de estado del túnel inactive -> healthy al conectar el conector"
-  - "regla de un solo conector (bajar el entorno de test del servidor antes de levantarlo en local)"
+  - "regla de un solo conector (prod y el test de cada developer son túneles separados; mover un entorno entre máquinas exige bajarlo del origen primero)"
   - "limpieza de stack y secrets al mover un entorno entre contextos"
   - "stack deploy no remueve servicios eliminados del yml (retirar un servicio = quitarlo del yml + docker service rm manual)"
 reads-before: [ops.entornos-imagen, ops.secretos, ops.exponer-tunnel]
@@ -140,11 +140,11 @@ Repite el despliegue para `test`, esta vez contra el **Swarm local**:
 ./deploy.sh test
 ```
 
-> **Antes de levantar `test` en local, bájalo del servidor** (regla del único conector). Retíralo del servidor primero, stack y secrets incluidos:
+> **Regla del único conector.** El túnel de test de cada developer se sirve **solo desde su máquina local**, así que normalmente no hay nada que bajar. Pero si tu túnel de test quedó corriendo en otro context (p. ej. lo levantaste antes en el servidor), bájalo de ahí primero —stack y secrets incluidos— antes de levantarlo local:
 > ```bash
-> docker -c ${APP}-prod stack rm ${APP}_test
-> docker -c ${APP}-prod secret ls --format '{{.Name}}' | grep "^${APP}_test_" \
->   | xargs -n1 docker -c ${APP}-prod secret rm
+> docker -c <ctx-anterior> stack rm ${APP}_test
+> docker -c <ctx-anterior> secret ls --format '{{.Name}}' | grep "^${APP}_test_" \
+>   | xargs -n1 docker -c <ctx-anterior> secret rm
 > ```
 
 El flujo es análogo, sin la fase de backup (solo `prod`), y termina con el health node-side y la sonda warn-only sobre `https://<host-de-test>/api/health`. Verifica con `docker stack services ${APP}_test`: los mismos cinco servicios, con `migrate` en `0/1 (1/1 completed)`.

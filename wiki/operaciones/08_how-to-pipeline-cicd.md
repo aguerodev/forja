@@ -64,7 +64,7 @@ Cada fase del release es un **script determinista** en `scripts/release/` con sa
 
 Lo único que NUNCA se scriptea son los **gates humanos**: confirmar `prod` antes de desplegar, `rollback` antes de revertir producción y `restaurar datos` antes de tocar el plano de datos. Un guardarraíl que importa se prueba también en negativo: los scripts se validan verificando que **fallan** cuando deben (preflight fuera de `main`, verify con SHA equivocado), no solo que pasan.
 
-La interfaz del operador queda por entorno: **`/forja:deploy preview|production`** y **`/forja:rollback preview|production`**, donde `preview` es el swarm local (`dev-shorter.<dominio>`) sin gates de procedencia — existe justamente para probar trabajo en curso — y `production` exige el protocolo completo.
+La interfaz del operador queda por entorno: **`/forja:deploy preview|production`** y **`/forja:rollback preview|production`**, donde `preview` es el swarm local (`<dev>-${PUBLIC_NAME}.<dominio>`, por developer) sin gates de procedencia — existe justamente para probar trabajo en curso — y `production` exige el protocolo completo.
 
 ### Orden canónico de un release
 

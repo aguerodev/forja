@@ -9,7 +9,20 @@
 # if node is not available we exit 0 silently (never break a session).
 set -u
 
-command -v node >/dev/null 2>&1 || exit 0
+# Degraded-context banner: static, interpolation-free JSON that is safe to
+# emit without node. Used whenever we are inside a forja project but cannot
+# build the real context — degrading VISIBLY beats starting a blind session.
+DEGRADED_JSON='{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"ATENCIÓN forja: no pude armar el contexto de sesión (.forja.json ilegible o node ausente). La sesión arranca DEGRADADA: sin resumen del proyecto y sin importar la memoria de equipo. Corré /forja:doctor para diagnosticar."}}'
+
+if ! command -v node >/dev/null 2>&1; then
+  ROOT_NOJS="$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "${PWD}")"
+  if [ -f "${ROOT_NOJS}/.forja.json" ]; then
+    printf '%s\n' "${DEGRADED_JSON}"
+  else
+    printf '{}\n'
+  fi
+  exit 0
+fi
 
 PAYLOAD="$(cat 2>/dev/null || printf '')"
 
@@ -81,8 +94,9 @@ node -e '
       hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: msg },
     }) + "\n");
   } catch {
-    process.stdout.write("{}\n");
+    // Signal the wrapper via exit code; it emits the static degraded banner.
+    process.exit(3);
   }
-' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" 2>/dev/null || printf '{}\n'
+' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" 2>/dev/null || printf '%s\n' "${DEGRADED_JSON}"
 
 exit 0

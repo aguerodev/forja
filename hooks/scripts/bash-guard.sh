@@ -12,10 +12,15 @@
 # block work (exit 0, silent).
 set -u
 
-# Fail open if node (the analysis runtime) is unavailable.
-command -v node >/dev/null 2>&1 || exit 0
+# Fail open if node (the analysis runtime) is unavailable — but leave a trace.
+if ! command -v node >/dev/null 2>&1; then
+  printf 'forja bash-guard: node ausente - guardias INACTIVAS (fail-open)\n' >&2
+  exit 0
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-node "${SCRIPT_DIR}/bash-guard.js" 2>/dev/null || exit 0
+# stderr passes through: on an internal guard error the JS leaves a one-line
+# trace there (visible in verbose/debug) instead of dying in silence.
+node "${SCRIPT_DIR}/bash-guard.js" || exit 0
 exit 0
