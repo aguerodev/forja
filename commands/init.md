@@ -86,7 +86,11 @@ Si el usuario quiere el repo en GitHub y `gh` está autenticado con la cuenta co
 gh repo create <org>/<repo> --private --source . --push
 git push -u origin develop
 gh repo edit <org>/<repo> --default-branch develop
+DEV_LOGIN="$(gh api user -q .login 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+[ -n "$DEV_LOGIN" ] && git config --local forja.devUser "$DEV_LOGIN" || echo "WARN: no pude obtener el login de gh - forja.devUser queda sin setear (NO lo setees vacío)"
 ```
+
+La última línea fija el **label de preview por developer**: tu preview vivirá en `<usuario>-<publicName>.<dominio>` y no colisiona con el de tus compañeros (cada uno tiene su Swarm local y su túnel). Si el usuario salteó GitHub, no la corras — el preview usará el fallback `dev-` (correcto para un solo developer). Cada compañero que clone el repo la corre una vez en su máquina (`/forja:doctor` avisa si falta).
 
 Nota para el usuario: en plan free de GitHub no hay branch protection en repos privados — el candado real de production es el preflight de `/forja:deploy` (rama, tree limpio, tags), no una regla del server.
 

@@ -9,7 +9,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 | Aplicación (`APP`) | `{{APP}}` |
 | Repositorio | `{{GH_ORG}}/{{GH_REPO}}` |
 | Dominio de producción | `{{PUBLIC_NAME}}.{{DOMAIN}}` |
-| Dominio de dev/test (Swarm local) | `dev-{{PUBLIC_NAME}}.{{DOMAIN}}` |
+| Dominio de preview (Swarm local, POR developer) | `<tu-usuario>-{{PUBLIC_NAME}}.{{DOMAIN}}` — el label sale de `git config forja.devUser` (fallback `dev-` para un solo dev) |
 | Contexto Docker de prod | `{{APP}}-prod` |
 | Node | `{{NODE_VERSION}}` |
 | PostgreSQL | `{{PG_MAJOR}}` |
@@ -41,7 +41,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 - **`develop` = rama default.** Integración continua del equipo; tampoco recibe push directo.
 - **`feature/*`** nace de `develop` y vuelve por PR. **`release/*`** prepara el corte: el **bump de versión se hace SOLO en `release/*`**. **`hotfix/*`** nace de `main` para el incendio.
 - **Back-merge obligatorio**: todo lo que entra a `main` (release u hotfix) vuelve a `develop`.
-- Ningún PR se mergea sin `pnpm run check` **verde**.
+- Ningún PR se mergea sin `pnpm run check` **verde**. Y ningún PR se abre sin **`engram sync` + commit de `.engram/`**: el código y el conocimiento que lo produjo viajan en el MISMO PR (es un paso del protocolo, no un opcional).
 - **Enforcement en tres capas**: la convención del equipo + la guardia del plugin (bloquea push/commit directo a `main`/`develop` en local) + el **preflight de `/forja:deploy`** (nada llega a prod si no es `main`, limpio, al día y con gates verdes). Si el plan de GitHub no ofrece branch protection, el candado real es ese preflight.
 
 ## Preferencias de proceso (gentle-ai / SDD)
@@ -65,6 +65,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 - **El equipo recibe forja solo.** Al clonar y confiar la carpeta, `.claude/settings.json` registra el marketplace y habilita el plugin — sin setup manual.
 - **1 feature = 1 carpeta = 1 agente.** Cada slice de `src/features/<feature>/` es un territorio: un developer (con su agente) por slice, sin pisarse. **dependency-cruiser lo impone** — el cruce entre features solo pasa por `public.ts`, así que dos slices en paralelo no colisionan.
 - **Antes de cortar rama, corré `/forja:status`** para ver qué slices están tomados y elegir uno libre.
+- **Si al abrir la sesión NO apareció el resumen del proyecto** (o apareció el aviso de contexto DEGRADADO), algo está roto en los hooks o en `.forja.json`: corré `/forja:doctor` antes de trabajar — una sesión sin doctrina ni memoria produce código fuera de norma sin darse cuenta.
 - **Cambios a `src/core/` o `src/shared/` van en PR propio y coordinado**: son territorio común, tocarlos dentro del PR de una feature genera conflictos con todo el equipo.
 
 ## Secretos

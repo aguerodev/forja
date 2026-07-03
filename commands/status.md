@@ -26,7 +26,7 @@ git for-each-ref --sort=-committerdate refs/remotes --format='%(refname:short) %
 gh pr list --state open 2>/dev/null || echo "sin gh o sin remota GitHub - paso salteado"
 ```
 
-4. **Cambios SDD activos** — si existe `openspec/changes/`, listá su contenido excluyendo `archive/`.
+4. **Cambios SDD activos** — si existe `openspec/changes/`, listá su contenido excluyendo `archive/`. Si NO existe `openspec/` pero SÍ hay `software_requirements/`, marcá un WARN: puede que un `sdd-init` haya dejado el artifact store en `engram` — la doctrina del equipo es `openspec` (los artefactos del cambio viajan en el PR; en engram quedan invisibles para el resto).
 
 5. **Backlog pendiente** — si existe `software_requirements/00-handoff.md`, extraé los ítems del backlog de cambios candidatos que todavía no tienen rama ni cambio SDD.
 

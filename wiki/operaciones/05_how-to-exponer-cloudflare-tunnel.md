@@ -27,7 +27,9 @@ related: [proc.arrancar]
 
 Expone una aplicación del Swarm a internet a través de un **Cloudflare Tunnel**, aprovisionado íntegramente desde la API de Cloudflare, sin abrir ningún puerto entrante en el servidor. El tráfico HTTP llega a Cloudflare y baja por un túnel **saliente** que `cloudflared` mantiene abierto; el firewall sigue dejando entrar solo SSH.
 
-Crea **un túnel por entorno** (`prod` y `test`), cada uno con su token y su registro DNS. Todo se ejecuta **en tu máquina local** contra la API de Cloudflare; no toca el servidor.
+Crea **un túnel por entorno** —`prod` (uno para el equipo) y `test` (**uno por developer**: `${APP}-test-<dev>`)—, cada uno con su token y su registro DNS. Todo se ejecuta **en tu máquina local** contra la API de Cloudflare; no toca el servidor.
+
+> **Quién corre qué.** El primer developer aprovisiona `prod` **y** su propio `test`. Cada compañero que se suma corre esta guía **solo con `ENV=test`** (su propio túnel y hostname); `prod` ya existe y no se recrea.
 
 Asume que ya tienes:
 
@@ -76,13 +78,13 @@ El registro DNS que apunta el hostname al túnel se crea `proxied: true` (“nub
 
 ### Por qué una etiqueta única con guion y no un subdominio multinivel
 
-El entorno de prueba usa `dev-${APP}.<dominio>` —una etiqueta, con **guion**— y no `dev.${APP}.<dominio>` —dos niveles, con **punto**—, por costo. El Universal SSL gratuito de Cloudflare cubre el dominio raíz y **un nivel** de subdominio (`*.<dominio>`). `dev-${APP}` es una etiqueta bajo la raíz y cae dentro de ese comodín sin costo. `dev.${APP}.<dominio>` es subdominio de segundo nivel: el comodín no lo abarca, y cubrirlo con TLS exigiría un Advanced Certificate, con costo extra. (El prefijo literal `dev-` es convención; parametrízalo para tu caso.)
+El entorno de prueba usa `<dev>-${APP}.<dominio>` —una etiqueta, con **guion**— y no `<dev>.${APP}.<dominio>` —dos niveles, con **punto**—, por costo. El Universal SSL gratuito de Cloudflare cubre el dominio raíz y **un nivel** de subdominio (`*.<dominio>`). `<dev>-${APP}` es una etiqueta bajo la raíz y cae dentro de ese comodín sin costo. `<dev>.${APP}.<dominio>` es subdominio de segundo nivel: el comodín no lo abarca, y cubrirlo con TLS exigiría un Advanced Certificate, con costo extra. Esto vale para cualquier valor del label per-developer (`aguerodev-app`, `maria-app`, o el fallback `dev-app`): mientras sea UNA etiqueta con guiones, el comodín gratuito la cubre.
 
 > En la zona, usa el modo SSL **Full** para que el TLS de extremo Cloudflare↔origen quede coherente con el túnel.
 
-### Por qué un túnel por entorno
+### Por qué un túnel por entorno (y por developer en test)
 
-`prod` y `test` no comparten túnel: cada uno tiene el suyo, con su token, su ingress y su CNAME. Aunque corran en lugares distintos —`prod` en el servidor y `test` en el Swarm local de la máquina de desarrollo— quedan **aislados**: un cambio, una rotación de token o un problema en uno no arrastra al otro, y cada entorno expone solo su hostname. Costo: duplicar el aprovisionamiento. Ganancia: que no se pisan.
+`prod` y `test` no comparten túnel: cada uno tiene el suyo, con su token, su ingress y su CNAME. Aunque corran en lugares distintos —`prod` en el servidor y `test` en el Swarm local de la máquina de desarrollo— quedan **aislados**: un cambio, una rotación de token o un problema en uno no arrastra al otro, y cada entorno expone solo su hostname. Y en `test` el aislamiento baja un nivel más: **cada developer tiene su propio túnel** (`${APP}-test-<dev>`) apuntando a su Swarm local, con su token en su `secrets/test.env`; dos devs desplegando preview a la vez no colisionan en Cloudflare ni comparten credenciales. Costo: un aprovisionamiento por entorno y por developer. Ganancia: que nadie se pisa.
 
 ### Estados del túnel y errores esperables
 
@@ -115,7 +117,7 @@ El `TUNNEL_TOKEN` autentica al conector contra Cloudflare: es un secreto real. *
 
 ## Camino verificado
 
-El procedimiento ejecutado, ya depurado. Comandos genéricos: parametriza `APP`, `BASE_DOMAIN` y `ENV` para tu caso. Recorre la guía una vez con `ENV=prod` y otra con `ENV=test`.
+El procedimiento ejecutado, ya depurado. Comandos genéricos: parametriza `APP`, `BASE_DOMAIN` y `ENV` para tu caso. El primer developer lo recorre con `ENV=prod` y con `ENV=test`; los que se suman después, **solo con `ENV=test`** (su propio túnel per-dev — `prod` ya está aprovisionado).
 
 ### Paso 1 — Preparar credenciales y derivar los IDs de cuenta y zona
 
@@ -173,14 +175,14 @@ Define el entorno y deriva de él el hostname público y el nombre del túnel:
 ```bash
 source ~/.cf_provision.env
 APP="app"; ENV="prod"   # prod | test
+DEV_LABEL="$(git config --get forja.devUser 2>/dev/null | tr '[:upper:]' '[:lower:]')"
 case "$ENV" in
-  prod) PUBLIC_HOST="${APP}.${BASE_DOMAIN}" ;;
-  test) PUBLIC_HOST="dev-${APP}.${BASE_DOMAIN}" ;;
+  prod) PUBLIC_HOST="${APP}.${BASE_DOMAIN}"; TUNNEL_NAME="${APP}-prod" ;;
+  test) PUBLIC_HOST="${DEV_LABEL:-dev}-${APP}.${BASE_DOMAIN}"; TUNNEL_NAME="${APP}-test-${DEV_LABEL:-dev}" ;;
 esac
-TUNNEL_NAME="${APP}-${ENV}"
 ```
 
-La convención de hostnames deriva del nombre de la app: `prod` → `${APP}.${BASE_DOMAIN}`, `test` → `dev-${APP}.${BASE_DOMAIN}`. El entorno de prueba usa la etiqueta única `dev-${APP}` (con guion, no punto) a propósito; el porqué está en la [Norma](#por-qué-una-etiqueta-única-con-guion-y-no-un-subdominio-multinivel).
+La convención de hostnames deriva del nombre de la app: `prod` → `${APP}.${BASE_DOMAIN}`, `test` → `<dev>-${APP}.${BASE_DOMAIN}` **por developer**: el label `<dev>` sale de `git config forja.devUser` (lo setea `/forja:init` con el usuario de GitHub; `dev` es el fallback para un solo developer). Cada developer corre su propio Swarm local, así que cada uno aprovisiona **su** túnel (`${APP}-test-<dev>`) con **su** hostname y guarda **su** token en su `secrets/test.env` local — dos devs desplegando preview no se pisan ni comparten credenciales. La etiqueta sigue siendo única con guion (no punto) a propósito; el porqué está en la [Norma](#por-qué-una-etiqueta-única-con-guion-y-no-un-subdominio-multinivel).
 
 ### Paso 3 — Crear el túnel
 
@@ -253,7 +255,7 @@ El `deploy.sh` lee ese `TUNNEL_TOKEN` y lo materializa como el Docker secret `${
 
 ### Paso 7 — Repetir para el otro entorno
 
-Vuelve al Paso 2 con `ENV=test` y recorre los Pasos 3 a 6. Cada entorno obtiene **su propio túnel, su propio token y su propio CNAME**; `prod` y `test` quedan aislados y pueden correr en entornos separados (el servidor y tu máquina local).
+Si sos el primer developer, vuelve al Paso 2 con `ENV=test` y recorre los Pasos 3 a 6 (con `DEV_LABEL` seteado a tu usuario). Cada entorno obtiene **su propio túnel, su propio token y su propio CNAME**; `prod` y `test` quedan aislados y pueden correr en máquinas separadas (el servidor y tu máquina local). Los compañeros que se suman **solo** hacen la pasada `ENV=test` con su propio `DEV_LABEL`: `prod` ya existe, no se recrea.
 
 ### Paso 8 — Verificación final
 

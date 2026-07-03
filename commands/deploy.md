@@ -16,17 +16,22 @@ Leé `.forja.json` en la raíz del repo. Si NO existe → decile al usuario que 
 
 ```bash
 node -e '
+const { execSync } = require("child_process");
 const c = JSON.parse(require("fs").readFileSync(".forja.json", "utf8"));
+let dev = "";
+try { dev = execSync("git config --get forja.devUser", {stdio:["ignore","pipe","ignore"]}).toString().trim().toLowerCase(); } catch {}
 console.log("APP=" + c.app);
 console.log("STACK_TEST=" + c.app + "_test");
 console.log("STACK_PROD=" + c.app + "_prod");
-console.log("PREVIEW_HOST=dev-" + c.publicName + "." + c.domain);
+console.log("PREVIEW_HOST=" + (dev || "dev") + "-" + c.publicName + "." + c.domain);
 console.log("PROD_HOST=" + c.publicName + "." + c.domain);
 console.log("DOCKER_CONTEXT=" + c.dockerContext);
 console.log("DB_USER=" + c.db.user);
 console.log("DB_NAME=" + c.db.name);
 '
 ```
+
+El host de preview es **por developer**: el label sale de `git config forja.devUser` (lo setea `/forja:init`; fallback `dev` si falta). Cada dev tiene su Swarm local, su túnel y su hostname — no se pisan. Si `PREVIEW_HOST` salió con `dev-` y hay más de un developer en el proyecto, sugerí setear el label antes de aprovisionar el túnel: `git config --local forja.devUser <usuario-github>`.
 
 Guardate estos valores: los bloques de abajo usan `$STACK_TEST`, `$PREVIEW_HOST`, `$STACK_PROD`, `$DOCKER_CONTEXT` como marcadores — **sustituilos por los valores derivados** al ejecutar (cada bloque de bash corre en un shell nuevo; las variables no persisten solas).
 
