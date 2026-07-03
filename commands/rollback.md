@@ -45,7 +45,7 @@ bash scripts/release/rollback-to.sh $ARGUMENTS <tag-elegido>
 ```
 
 - Exit 0 → el script ya verificó health y muestra el build SHA corriendo.
-- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker stack ps <stack>` (agregando `-c $DOCKER_CONTEXT` si es production).
+- Exit ≠ 0 → mostrar el `[FAIL]` y diagnosticar con `docker stack ps <stack>` (agregando `-c $DOCKER_CONTEXT` si es production). Si el fallo fue del propio flujo forja (no del entorno del usuario), ofrecé reportarlo con la skill `report-failure` — diagnóstico redactado, issue solo con confirmación.
 
 ## Volver a la última versión
 

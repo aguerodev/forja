@@ -1,0 +1,75 @@
+name: Fallo de flujo forja
+description: Reportar un fallo al ejecutar un flujo del plugin (init, deploy, rollback, status, doctor o un hook).
+title: "[flow-failure] <comando> — <fase>"
+labels: ["flow-failure"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. Este repo es **público**: revisá que el error y los pasos
+        no lleven rutas privadas, tokens ni nombres internos antes de enviar.
+
+        Si estás dentro de una sesión de Claude Code, dejá que el agente arme el reporte:
+        corre `scripts/forja-report.sh` y completa el entorno con versiones reales.
+  - type: input
+    id: comando
+    attributes:
+      label: Comando / flujo
+      description: Qué estabas ejecutando cuando falló.
+      placeholder: "/forja:deploy production"
+    validations:
+      required: true
+  - type: input
+    id: fase
+    attributes:
+      label: Fase
+      description: En qué punto del flujo se rompió (si aplica).
+      placeholder: "backup off-site / gate humano / instanciación de template"
+    validations:
+      required: false
+  - type: textarea
+    id: que-fallo
+    attributes:
+      label: Qué falló
+      description: Descripción corta de lo que pasó.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué esperabas que pasara
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: textarea
+    id: error
+    attributes:
+      label: Error / logs
+      description: Salida del error, ya redactada. Se renderiza como bloque de código.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: entorno
+    attributes:
+      label: Entorno
+      description: Pegá la tabla que imprime `scripts/forja-report.sh` (Claude Code, plugin, SO, gh, node, git).
+      value: |
+        | Componente | Versión |
+        | --- | --- |
+        | Claude Code |  |
+        | Plugin forja |  |
+        | Sistema operativo |  |
+        | gh |  |
+        | node |  |
+        | git |  |
+    validations:
+      required: true
