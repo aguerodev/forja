@@ -84,22 +84,27 @@ if command -v node >/dev/null 2>&1; then
   TOKEN="$(printf '%s' "${STATUS_OUT}" | node -e '
     let d = ""; process.stdin.on("data", c => d += c); process.stdin.on("end", () => {
       const out = (t) => { process.stdout.write(t); process.exit(0); };
-      let enabled, reason;
-      try { const j = JSON.parse(d); enabled = j.enabled; reason = j.reason_code; }
-      catch {
-        const m = d.match(/reason_code["\s:]+([a-z_]+)/i); if (m) reason = m[1];
-        if (/"?enabled"?\s*[:=]\s*true/i.test(d)) enabled = true;
-        else if (/"?enabled"?\s*[:=]\s*false/i.test(d)) enabled = false;
-      }
       const bad = {
         blocked_unenrolled: "not_enrolled", auth_required: "auth",
         policy_forbidden: "forbidden", cloud_config_error: "not_configured",
         cloud_not_configured: "not_configured", project_required: "not_configured",
         transport_failed: "unreachable", paused: "disabled",
       };
-      if (reason && bad[reason]) return out("RECOMMEND:" + bad[reason]);
-      if (enabled === true) return out("OK");
-      if (enabled === false) return out("RECOMMEND:disabled");
+      // Future/JSON output: explicit enabled + reason_code fields.
+      try {
+        const j = JSON.parse(d);
+        if (j.reason_code && bad[j.reason_code]) return out("RECOMMEND:" + bad[j.reason_code]);
+        if (j.enabled === true) return out("OK");
+        if (j.enabled === false) return out("RECOMMEND:disabled");
+      } catch {}
+      // engram CLI >= 1.17 prints HUMAN TEXT (no enabled/reason_code, no --json):
+      //   "Cloud sync status (project=...): Local chunks: N / Remote chunks: N / Pending import: N"
+      const t = d.toLowerCase();
+      if (/blocked_unenrolled|not enrolled|enroll the project/.test(t)) return out("RECOMMEND:not_enrolled");
+      if (/unauthor|\b401\b|invalid token/.test(t)) return out("RECOMMEND:auth");
+      if (/forbidden|\b403\b|access denied/.test(t)) return out("RECOMMEND:forbidden");
+      if (/cloud sync status|remote chunks/.test(t)) return out("OK");
+      if (/refused|timed?\s?out|could not|unreachable|no route|failed to (connect|reach)/.test(t)) return out("RECOMMEND:unreachable");
       return out("RECOMMEND:unreachable");
     });
   ' 2>/dev/null || printf '')"
@@ -109,11 +114,12 @@ case "${TOKEN}" in
   OK)            emit "ENGRAM_CLOUD_OK" ;;
   RECOMMEND:*)   emit "ENGRAM_CLOUD_${TOKEN}" ;;
   *)
-    # Fallback without node: a payload mentioning enrolled/enabled is a good sign.
+    # Fallback without node. Plain-text (CLI >=1.17) success shows the status
+    # header / "Remote chunks"; JSON shows enabled:true.
     case "${STATUS_OUT}" in
-      *'"enabled": true'*|*'enabled=true'*) emit "ENGRAM_CLOUD_OK" ;;
-      *blocked_unenrolled*) emit "ENGRAM_CLOUD_RECOMMEND:not_enrolled" ;;
-      *auth_required*)      emit "ENGRAM_CLOUD_RECOMMEND:auth" ;;
+      *'"enabled": true'*|*'enabled=true'*|*'Cloud sync status'*|*'Remote chunks'*) emit "ENGRAM_CLOUD_OK" ;;
+      *blocked_unenrolled*|*'not enrolled'*) emit "ENGRAM_CLOUD_RECOMMEND:not_enrolled" ;;
+      *auth_required*|*nauthor*)             emit "ENGRAM_CLOUD_RECOMMEND:auth" ;;
       *) emit "ENGRAM_CLOUD_RECOMMEND:unreachable" ;;
     esac ;;
 esac
