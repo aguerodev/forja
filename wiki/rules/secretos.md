@@ -5,6 +5,7 @@
 - Respetá el contrato de nombre: nombre del secret (su `target`) = clave del campo en el schema Zod de `config`, sin tabla de mapeo.
 - Si un secreto entró a git, avisá de inmediato y ROTALO: borrarlo del historial no alcanza.
 - Tratá el token Hetzner read-write como break-glass: vive en el gestor de secretos del equipo, se inyecta just-in-time vía `$HCLOUD_TOKEN` solo para una operación mutadora confirmada por un humano, y se descarta al terminar — nunca lo persistas en disco plano ni en el nodo.
+- PROHIBIDO anotar un secreto en engram (token, contraseña, clave privada): la memoria sincroniza a un server compartido y commitea chunks a git, así que lo filtraría al equipo y al historial. Engram guarda el saber SOBRE el secreto (que existe, dónde vive, cómo rotarlo), nunca su valor — el valor solo en el gestor del equipo.
 - Pedí las API keys que te falten al usuario directamente en el chat: pasar secretos por el chat está OK.
 - Tratá todo token (túnel, API key) con el mismo cuidado que cualquier otro secreto: cualquiera que lo tenga puede usarlo.
 
