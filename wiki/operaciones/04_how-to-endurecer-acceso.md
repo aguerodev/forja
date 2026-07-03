@@ -15,7 +15,7 @@ provides:
   - "grupo docker == root en el host (modelo de seguridad)"
   - "antipatrón de restringir la clave SSH a un solo comando (falsa seguridad, rompe el pipeline)"
   - "inversión del modelo (acota quién puede ser deploy, no qué puede hacer deploy con Docker)"
-  - "barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / consola de rescate"
+  - "barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / break-glass = Rescue System del proveedor (root queda bloqueada; no consola-con-password)"
   - "NOPASSWD justificado para una cuenta --disabled-password"
   - "por qué el firewall solo abre SSH (el HTTP entra por túnel saliente)"
   - "endurecimiento sysctl de la pila de red (CIS L1; después de Docker)"
@@ -84,7 +84,7 @@ La regla: **la passphrase protege la clave del humano; el almacén de secrets pr
 
 ### Por qué el orden de cierre evita el autobloqueo
 
-Asegurar el acceso es cambiar una puerta por otra: abrir la nueva (clave de `deploy` con `sudo`) y tapiar la vieja (login de `root` y autenticación por contraseña). Si cierras `root` o la contraseña **antes** de comprobar que la clave nueva funciona —clave mal pegada, permiso de más en `authorized_keys`, `sudoers` roto—, te quedas sin ninguna puerta, porque el medio para arreglarlo es el que tapiaste. En un servidor remoto eso significa, en el mejor caso, consola de rescate del proveedor; en el peor, reinstalar.
+Asegurar el acceso es cambiar una puerta por otra: abrir la nueva (clave de `deploy` con `sudo`) y tapiar la vieja (login de `root` y autenticación por contraseña). Si cierras `root` o la contraseña **antes** de comprobar que la clave nueva funciona —clave mal pegada, permiso de más en `authorized_keys`, `sudoers` roto—, te quedas sin ninguna puerta, porque el medio para arreglarlo es el que tapiaste. En un servidor remoto eso significa, en el mejor caso, el **Rescue System** del proveedor (Paso 7); en el peor, reinstalar.
 
 Por eso el procedimiento pone una **barrera de verificación** entre abrir y cerrar: instalar la clave, dar el `sudo`, abrir una sesión real como `deploy` y confirmar las tres cosas —entra con su clave, escala a `root` con `sudo`, opera Docker—. Solo entonces, y con la sesión `root` todavía abierta como red de seguridad, se endurece SSH. Regla: **nunca cierres una vía de acceso sin haber probado la que la reemplaza.**
 
@@ -98,9 +98,9 @@ Sobre el alcance: `NOPASSWD:ALL` es **administración total del host**, no un pe
 
 ### Por qué hay que verificar el break-glass ANTES de cerrar `root`
 
-El orden de cierre se apoya en una premisa: existe una **red de rescate** por si la clave nueva falla justo cuando ya se tapió `root`. Esa red es la **consola web (VNC) del proveedor** —en Hetzner Cloud, la Console del panel—, que entra al servidor por fuera de SSH y sobrevive a un lockout total de la red. Pero una red de rescate que nunca se probó es una suposición, no una red. Si la consola pide una credencial de `root` que nadie fijó ni guardó, descubrir que no funciona **después** de cerrar SSH es exactamente el autobloqueo que el procedimiento dice evitar.
+El orden de cierre se apoya en una premisa: existe una **red de rescate** por si la clave nueva falla justo cuando ya se tapió `root`. Esa red es el **Rescue System del proveedor** —en Hetzner, un Linux mínimo que arranca **en RAM** con su propia credencial de `root` (Hetzner la genera al activarlo, mostrada en el panel), independiente de las cuentas del sistema instalado—. Entrás por SSH al entorno de rescate, montás el disco y reparás `authorized_keys`/`sshd_config`/`sudoers`. Es la red de rescate correcta **precisamente porque `root` queda bloqueada**: el gate de aceptación (`verify.sh` exige `passwd -S root` = `L`, y Lynis premia lo mismo) y `deploy` con `lock_passwd: true` dejan al sistema sin ninguna cuenta con contraseña. La consola web (VNC) del proveedor sirve para **observar** el arranque fuera de SSH, pero con las cuentas bloqueadas **no** podés loguearte en su prompt: no es el break-glass, el Rescue System sí.
 
-Por eso, **antes** del endurecimiento de SSH, hay un paso explícito que abre la consola del proveedor, confirma que entra y deja la credencial guardada **off-site** (fuera del laptop del operador y fuera del propio servidor). Misma regla madre del doc: nunca cierres una vía sin haber probado la que la reemplaza —y la consola es la vía que reemplaza a SSH cuando SSH no está.
+Por eso, **antes** del endurecimiento de SSH, hay un paso explícito que confirma que tenés acceso al panel/API del proveedor para **activar el Rescue System** y que conocés el flujo (activar rescue → reboot → SSH a la credencial temporal). Esas credenciales del panel/API se guardan **off-site** (fuera del laptop del operador y fuera del propio servidor). Misma regla madre del doc: nunca cierres una vía sin haber confirmado la que la reemplaza —y el Rescue System es la vía que reemplaza a SSH cuando SSH no está y todas las cuentas están bloqueadas.
 
 ### Por qué el endurecimiento de kernel (`sysctl`) va DESPUÉS de Docker
 
@@ -288,7 +288,7 @@ enabled = true
 port    = 22
 ```
 
-`ignoreip` es la defensa directa contra el **auto-ban del operador**: con auth solo-por-clave, un `ssh` con la identidad equivocada o un job de CI que erra acumula 5 fallos y se auto-banea a nivel firewall, dejándote fuera igual que el autobloqueo de SSH. El loopback y el CIDR de administración quedan exentos. Si tu IP de oficina es dinámica y no tenés un CIDR estable, dejá solo loopback y compensá con el runbook de des-baneo (abajo) y la consola del proveedor (Paso 7).
+`ignoreip` es la defensa directa contra el **auto-ban del operador**: con auth solo-por-clave, un `ssh` con la identidad equivocada o un job de CI que erra acumula 5 fallos y se auto-banea a nivel firewall, dejándote fuera igual que el autobloqueo de SSH. El loopback y el CIDR de administración quedan exentos. Si tu IP de oficina es dinámica y no tenés un CIDR estable, dejá solo loopback y compensá con el runbook de des-baneo (abajo); ante un lockout total, el break-glass es el Rescue System (Paso 7).
 
 Habilita el servicio (no hace falta `restart`: `--now` ya lo arranca; para cambios posteriores usa `reload`, que no corta el jail):
 
@@ -315,21 +315,21 @@ fail2ban-client set sshd unbanip 203.0.113.7
 
 La IP de prueba debe aparecer en el set de `nft` tras el `banip` y desaparecer tras el `unbanip`. Si **no** aparece, el `banaction` no está actuando: confirma `banaction = nftables-multiport` y recarga con `systemctl reload fail2ban`.
 
-> **Runbook de des-baneo.** Si una IP legítima quedó baneada: `fail2ban-client set sshd unbanip <IP>` y confirma con `fail2ban-client status sshd`. Si te baneaste a vos mismo y perdiste SSH, el camino es la **consola del proveedor** (break-glass, Paso 7): entrás por VNC y corrés el `unbanip` desde ahí.
+> **Runbook de des-baneo.** Si una IP legítima quedó baneada: `fail2ban-client set sshd unbanip <IP>` y confirma con `fail2ban-client status sshd`. Si te baneaste a vos mismo y perdiste SSH, reconectá **desde otra IP** (hotspot, VPN) y corré el `unbanip`, o esperá a que expire el `bantime`. Si además perdiste toda vía de acceso, el break-glass es el **Rescue System** del proveedor (Paso 7); la VNC no sirve acá porque las cuentas están bloqueadas.
 >
 > **Alcance: SOLO el puerto 22.** `fail2ban` aquí cubre **únicamente** la fuerza bruta sobre SSH. No es un WAF ni defensa de capa de aplicación: el tráfico HTTP entra por el túnel de Cloudflare, así que la defensa app-layer (rate limiting, reglas WAF) es responsabilidad de Cloudflare, no de `fail2ban`.
 
-### Paso 7 — Verificar el break-glass (antes de cerrar `root`)
+### Paso 7 — Confirmar el break-glass (antes de cerrar `root`)
 
-> **No cierres `root` sin haber probado la consola del proveedor.** Este paso convierte la "red de rescate" de suposición en algo verificado (el porqué, en la [Norma](#por-qué-hay-que-verificar-el-break-glass-antes-de-cerrar-root)).
+> **No cierres `root` sin tener confirmado el Rescue System del proveedor.** Este paso convierte la "red de rescate" de suposición en algo confirmado (el porqué, en la [Norma](#por-qué-hay-que-verificar-el-break-glass-antes-de-cerrar-root)).
 
-Antes de tapiar SSH-`root`, confirma que existe y funciona la vía que lo reemplaza si SSH falla:
+El break-glass de este modelo es el **Rescue System** del proveedor, **no** una contraseña de `root` en la consola: `root` queda **bloqueada** (lo exige `verify.sh` y lo premia Lynis) y `deploy` tiene `lock_passwd: true`, así que el sistema instalado no tiene ninguna cuenta con contraseña para el prompt de la VNC. Fijar una contraseña de `root` para la consola **rompería el gate** (`passwd -S root` pasaría a `P` y `verify.sh` daría FAIL). Antes de tapiar SSH-`root`, confirma la vía de rescate que sí funciona:
 
-1. **Abre la consola web (VNC) del proveedor** —en Hetzner Cloud, la *Console* del panel del servidor— y confirma que **entra** y te da un prompt de login. Esta consola vive fuera de la red de SSH: sobrevive a un lockout total (clave rota, `ufw` mal, auto-ban de `fail2ban`).
-2. **Asegura la credencial de consola.** Si la consola pide una contraseña de `root` para esa sesión local, fíjala ahora (`passwd root` desde la sesión `root` actual) y **guárdala off-site**: en el gestor de secrets del equipo, **fuera** del laptop del operador y **fuera** del propio servidor. Que la consola entre no sirve si nadie tiene con qué loguearse en ella.
-3. (Opcional, reparación profunda) Ten presente que el proveedor también ofrece un **Rescue System** (Linux en RAM) para montar el disco y reparar `authorized_keys`/`sshd_config`/`sudoers` cuando el sistema ni siquiera arranca.
+1. **Confirma acceso al panel/API del proveedor** con permiso para activar el Rescue System, y **guarda esas credenciales off-site** (gestor de secrets del equipo, fuera del laptop del operador y fuera del propio servidor). Ese acceso es el que sobrevive a un lockout total de SSH (clave rota, `ufw` mal, auto-ban de `fail2ban`).
+2. **Ten claro el flujo del Rescue System** —Hetzner: *Rescue* → activar (Hetzner genera una contraseña de `root` temporal para el entorno de rescate) → *Reset*/reboot → `ssh root@<ip>` al Linux en RAM → montás el disco y reparás `authorized_keys`/`sshd_config`/`sudoers`—. La credencial de rescate es efímera y la emite el panel en cada activación: no hay nada que fijar ni guardar en el servidor.
+3. (Opcional) La **consola web (VNC)** sirve para **observar** el arranque fuera de SSH, pero con las cuentas bloqueadas no vas a poder loguearte en su prompt; para reparar de verdad, el camino es el Rescue System.
 
-Solo con la consola probada y su credencial guardada off-site, avanza al hardening.
+Solo con el acceso al panel/API confirmado y guardado off-site, avanza al hardening.
 
 ### Paso 8 — Endurecer SSH
 
@@ -469,7 +469,9 @@ lynis audit system
 
 Define un umbral de aceptación explícito: **Hardening Index ≥ 70** y **cero warnings** en SSH, firewall y auth. Las suppressions de warnings que el dial decide no atender (p. ej. no pinear ciphers) se documentan con su justificación, no se ignoran en silencio.
 
-Guarda el reporte —`verify.sh` con timestamp y PASS/FAIL, más el resumen de Lynis— **off-host**, en la máquina del operador o el almacén del equipo (igual que la passphrase de restic y la credencial de consola): el estado del nodo se atestigua con evidencia retenida fuera del nodo, no con un OK en pantalla que se pierde al cerrar la sesión.
+> **Falso positivo conocido en Ubuntu 26.04 — `PKGS-7388`.** Lynis 3.1.6 reporta "Can't find any security repository" aunque el repo `*-security` **sí** existe: en Ubuntu 26.04 vive en formato **deb822** (`/etc/apt/sources.list.d/ubuntu.sources`), que esa prueba de Lynis no parsea. Es una suppression **justificada**, no un hallazgo: confírmalo con `grep -r security /etc/apt/sources.list.d/ubuntu.sources` y documentá la excepción para que no confunda la lectura del Hardening Index.
+
+Guarda el reporte —`verify.sh` con timestamp y PASS/FAIL, más el resumen de Lynis— **off-host**, en la máquina del operador o el almacén del equipo (igual que la passphrase de restic y las credenciales del panel/API de rescate): el estado del nodo se atestigua con evidencia retenida fuera del nodo, no con un OK en pantalla que se pierde al cerrar la sesión.
 
 > Re-auditá periódicamente (Lynis cada tanto): `unattended-upgrades` cambia paquetes con el tiempo y la postura puede derivar. La auditoría no es un evento único del aprovisionamiento.
 

@@ -199,7 +199,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | backup pre-migración (pg_dump -Fc validado con pg_restore --list; aborta el deploy si no valida) | `ops.backups` |
 | backup sidecar del stack (servicio backup en stack.yml: pg_dump diario validado, retención 7 rotando local + Storage Box, clave SSH dedicada) | `ops.backups` |
 | backups del proveedor (snapshots de disco habilitados en Fase 0, ~+20%; atajo de RTO que cubre pgdata y el raft, complemento del dump off-site) | `ops.aprovisionar` |
-| barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / consola de rescate | `ops.endurecer-acceso` |
+| barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / break-glass = Rescue System del proveedor (root queda bloqueada; no consola-con-password) | `ops.endurecer-acceso` |
 | biome.json | `arq.gates-tooling` |
 | bloqueo optimista | `arq.convenciones` |
 | bootstrap local (nvm + corepack + pnpm install + secretos dev + postgres:17 + db:migrate + next dev) | `ops.entornos-imagen` |
