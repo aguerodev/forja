@@ -8,6 +8,7 @@
       "!**/coverage",
       "!**/reports",
       "!**/.claude",
+      "!**/.engram",
       "!**/ops",
       "!**/openspec",
       "!**/software_requirements"
