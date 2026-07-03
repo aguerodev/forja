@@ -23,10 +23,14 @@
 # Lo que NO hace este script (vive antes/aparte, ver docs):
 #   - Fase 0 (Hetzner Cloud Firewall, server sin password root, Backups, cloud-init):
 #     se hace en la consola/API del proveedor ANTES del primer boot. Ver user_data.yaml.
-#   - Fase 5 (cierre de SSH root/password): lo hace cloud-init en el primer boot
-#     (hardening base) y se refuerza en doc 04. Este script NO cierra SSH para no
-#     autobloquear una corrida manual; deja el drop-in de hardening y verifica con sshd -T.
 #   - Creacion del usuario deploy y su authorized_keys: lo hace cloud-init (user_data.yaml).
+#
+# Lo que SI hace (ojo): la Fase 5 aplica el cierre EFECTIVO de SSH root/password
+#   (PermitRootLogin no, PasswordAuthentication no, AllowUsers deploy) y recarga sshd.
+#   Usa 'reload' (no 'restart') para no cortar la sesion viva de una corrida manual,
+#   pero la politica efectiva cambia: nuevos logins de root/password quedan cerrados.
+#   Antes de recargar valida que 'deploy' exista con authorized_keys no vacio; si no,
+#   ABORTA (evita autobloqueo). El cierre base tambien viene de cloud-init en el boot.
 #
 # Uso:
 #   sudo APP=miapp TIMEZONE=UTC ./provision.sh
@@ -271,6 +275,23 @@ phase_docker_smoke() {
     || die "hello-world fallo: el plano de datos de Docker esta roto."
 }
 
+phase_deploy_docker_group() {
+  log "Fase 7 — ${DEPLOY_USER} en el grupo docker (opera Docker sin sudo)"
+  # user_data.yaml deja este paso a provision.sh a proposito (el grupo docker
+  # no existe hasta instalar Docker). Sin esto, 'docker node ls' como ${DEPLOY_USER}
+  # (doc 04 Paso 4) falla. Idempotente: solo agrega si falta.
+  if ! getent passwd "${DEPLOY_USER}" >/dev/null 2>&1; then
+    warn "usuario ${DEPLOY_USER} no existe todavia; omito el alta al grupo docker (lo crea cloud-init)."
+    return 0
+  fi
+  if id -nG "${DEPLOY_USER}" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+    log "  ${DEPLOY_USER} ya esta en el grupo docker; omito."
+  else
+    usermod -aG docker "${DEPLOY_USER}"
+    log "  ${DEPLOY_USER} agregado al grupo docker (re-login para que tome efecto)."
+  fi
+}
+
 # ────────────────────────────────────────────────────────────────────────────
 # Fase 6 — sysctl / kernel — DESPUES de Docker (orden deliberado)
 # ────────────────────────────────────────────────────────────────────────────
@@ -343,8 +364,12 @@ EOF
 )
   if write_if_changed /etc/fail2ban/jail.local "$conf"; then
     systemctl enable fail2ban >/dev/null 2>&1 || true
-    # reload (no restart): no corta el estado de bans vigentes.
-    systemctl reload fail2ban 2>/dev/null || systemctl restart fail2ban
+    # restart (NO reload) al (re)escribir jail.local: en una instalacion fresca
+    # el 'reload' registra el ban en la DB pero NO ejecuta el actionstart de la
+    # accion nftables, asi que la tabla inet f2b-table nunca se crea y el ban no
+    # llega a nft (verify.sh: FAIL ban NO efectivo). El restart reinicializa la
+    # accion. Verificado en Ubuntu 26.04 / fail2ban 1.1.0 / nftables 1.1.6.
+    systemctl restart fail2ban
   else
     systemctl enable --now fail2ban >/dev/null 2>&1 || true
   fi
@@ -356,6 +381,19 @@ EOF
 
 phase_ssh_hardening_dropin() {
   log "Fase 5 — drop-in de hardening SSH (precedencia corregida) + verificacion sshd -T"
+
+  # Guard anti-lockout: esta fase restringe el login a AllowUsers ${DEPLOY_USER} y
+  # rechaza root/password. Si ${DEPLOY_USER} no existe o no tiene una clave util,
+  # recargar sshd deja a TODOS afuera en el proximo reconnect. Fallar TEMPRANO.
+  if ! getent passwd "${DEPLOY_USER}" >/dev/null 2>&1; then
+    die "usuario ${DEPLOY_USER} no existe: aborto antes de cerrar SSH (evita lockout). Crealo (cloud-init/user_data.yaml) antes de endurecer."
+  fi
+  local _du_home
+  _du_home="$(getent passwd "${DEPLOY_USER}" | cut -d: -f6)"
+  if [[ ! -s "${_du_home}/.ssh/authorized_keys" ]]; then
+    die "${DEPLOY_USER} no tiene ${_du_home}/.ssh/authorized_keys con contenido: aborto antes de cerrar SSH (evita lockout)."
+  fi
+
   # CRITICO silencioso: por orden alfanumerico gana el PRIMER valor; 50-cloud-init.conf
   # (PasswordAuthentication yes) vence a 99-hardening.conf. Por eso el drop-in se
   # nombra 00-hardening.conf para ganar la precedencia, y se neutraliza el de cloud-init.
@@ -411,6 +449,7 @@ main() {
   phase_docker_install
   phase_swarm_init
   phase_docker_smoke
+  phase_deploy_docker_group
 
   # Fase 6 (sysctl DESPUES de Docker)
   phase_sysctl_hardening
@@ -418,7 +457,7 @@ main() {
   # Fase 10
   phase_fail2ban
 
-  # Fase 5 (drop-in; el cierre real de root/password lo aplica cloud-init en boot)
+  # Fase 5 (drop-in: aplica y valida el cierre efectivo de root/password; guard anti-lockout)
   phase_ssh_hardening_dropin
 
   log "Provision OK. Ejecuta ./verify.sh para el gate de post-condiciones."
