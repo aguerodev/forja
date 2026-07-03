@@ -24,7 +24,7 @@ Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez**
 /plugin install forja@forja
 ```
 
-**Verificá que quedó instalado:** corré `/forja:doctor` — debería listar el diagnóstico del entorno. Si escribís `/forja:` y aparecen `init`, `deploy`, `rollback`, `status`, `doctor` en el autocompletado, ya está.
+**Verificá que quedó instalado:** corré `/forja:doctor` — debería listar el diagnóstico del entorno. Si escribís `/forja:` y aparecen `init`, `deploy`, `rollback`, `status`, `doctor`, `statusline` en el autocompletado, ya está.
 
 ### Tu primer proyecto
 
@@ -72,6 +72,7 @@ En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el m
 | `/forja:rollback preview\|production` | Volver a una versión sana; el plano datos es aparte y human-confirmed. |
 | `/forja:status` | Solo lectura: quién está en qué, PRs abiertos, cambios SDD activos, slices libres. |
 | `/forja:doctor` | Diagnóstico de herramientas y conformidad del proyecto, con remediaciones. |
+| `/forja:statusline` | Instala la statusline de forja en `~/.claude` (dir │ rama │ modelo │ contexto% │ estado git). El arranque la sugiere si no la tenés. |
 
 ## Skills
 

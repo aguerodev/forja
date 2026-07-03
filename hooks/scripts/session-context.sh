@@ -79,6 +79,23 @@ case "${CLOUD_TOKEN}" in
   *) CLOUD_NOTE="" ;;
 esac
 
+# Statusline de forja: SUGERENCIA solamente (nunca instala). Si el dev no tiene
+# NINGUNA statusLine configurada (user/local/project), sugerir /forja:statusline.
+# Fail-soft hacia el silencio: ante cualquier duda (node falla, parse falla),
+# asumimos que ya tiene una y NO molestamos.
+STATUSLINE_NOTE=""
+HAS_SL="$(node -e '
+  const fs = require("fs");
+  const has = (p) => { try { return !!JSON.parse(fs.readFileSync(p, "utf8")).statusLine; } catch { return false; } };
+  const home = process.env.HOME || "";
+  const root = process.argv[1] || "";
+  const any = has(home + "/.claude/settings.json")
+    || has(home + "/.claude/settings.local.json")
+    || has(root + "/.claude/settings.json");
+  process.stdout.write(any ? "1" : "0");
+' "${ROOT}" 2>/dev/null || printf '1')"
+[ "${HAS_SL}" = "0" ] && STATUSLINE_NOTE="Statusline de forja disponible (dir │ rama │ modelo │ ctx% │ estado git): instalala con /forja:statusline."
+
 # Tooling check for the context message.
 MISSING=""
 for t in gentle-ai gh docker hcloud; do
@@ -93,6 +110,7 @@ node -e '
     const missing = process.argv[2] || "";
     const engramNote = process.argv[3] || "";
     const cloudNote = process.argv[4] || "";
+    const statuslineNote = process.argv[5] || "";
     const root = process.env.CLAUDE_PLUGIN_ROOT || "";
     const wrapper = root
       ? root + "/bin/hcloud-agent.sh"
@@ -105,6 +123,7 @@ node -e '
       "Infra Hetzner: usá " + wrapper + " — nunca hcloud crudo.";
     if (engramNote) msg += " " + engramNote;
     if (cloudNote) msg += " 💡 " + cloudNote;
+    if (statuslineNote) msg += " 💡 " + statuslineNote;
     if (missing) msg += " Faltan herramientas: " + missing + " — corré /forja:doctor.";
     if (msg.length > 700) msg = msg.slice(0, 700);
     process.stdout.write(JSON.stringify({
@@ -114,6 +133,6 @@ node -e '
     // Signal the wrapper via exit code; it emits the static degraded banner.
     process.exit(3);
   }
-' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" "${CLOUD_NOTE}" 2>/dev/null || printf '%s\n' "${DEGRADED_JSON}"
+' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" "${CLOUD_NOTE}" "${STATUSLINE_NOTE}" 2>/dev/null || printf '%s\n' "${DEGRADED_JSON}"
 
 exit 0
