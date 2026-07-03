@@ -46,6 +46,8 @@ Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez**
 
 Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **gh**, **engram** (MCP + CLI para memoria de equipo) y **gentle-ai** (SDD). El plugin instala sin ellas; `/forja:doctor` te dice cuáles faltan.
 
+**Inteligencia de código (LSP):** forja **trae la config LSP del stack** (`.lsp.json`) — al instalar el plugin, Claude Code obtiene definiciones, referencias, hover y símbolos para TypeScript/TSX, Tailwind, Bash, Dockerfile y YAML. Los binarios de los servidores se instalan aparte (Claude Code no los baja): `pnpm add -g typescript-language-server typescript @tailwindcss/language-server bash-language-server dockerfile-language-server-nodejs yaml-language-server`. `/forja:doctor` avisa cuáles faltan del PATH.
+
 ## Qué recibe el equipo automáticamente
 
 En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el marketplace forja: cada integrante que abra el repo con Claude Code recibe el plugin sin instalar nada a mano. Con eso llegan:
