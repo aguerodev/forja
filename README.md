@@ -46,7 +46,9 @@ Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez**
 
 Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **gh**, **engram** (MCP + CLI para memoria de equipo) y **gentle-ai** (SDD). El plugin instala sin ellas; `/forja:doctor` te dice cuáles faltan.
 
-**Inteligencia de código (LSP):** forja **trae la config LSP del stack** (`.lsp.json`) — al instalar el plugin, Claude Code obtiene definiciones, referencias, hover y símbolos para TypeScript/TSX, Tailwind, Bash, Dockerfile y YAML. Los binarios de los servidores se instalan aparte (Claude Code no los baja): `pnpm add -g typescript-language-server typescript @tailwindcss/language-server bash-language-server dockerfile-language-server-nodejs yaml-language-server`. `/forja:doctor` avisa cuáles faltan del PATH.
+**Inteligencia de código (LSP):** forja **trae la config LSP del stack** (`.lsp.json`) — al instalar el plugin, Claude Code obtiene definiciones, referencias, hover y símbolos para TypeScript/TSX, Tailwind (`.css`), Bash y YAML. Los binarios de los servidores se instalan aparte (Claude Code no los baja): `pnpm add -g typescript-language-server typescript @tailwindcss/language-server bash-language-server dockerfile-language-server-nodejs yaml-language-server`. `/forja:doctor` avisa cuáles faltan del PATH.
+
+> **Límite conocido — Dockerfile:** el LSP de Claude Code matchea **solo por extensión con punto** (`.ts`, `.sh`), y el `Dockerfile` canónico no tiene extensión, así que su servidor **no engancha vía plugin-LSP** (sí matchea `*.dockerfile`). El binario `docker-langserver` igual se lista en `/forja:doctor` porque tu editor (que matchea por nombre de archivo) sí lo aprovecha.
 
 ## Qué recibe el equipo automáticamente
 
