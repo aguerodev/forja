@@ -27,7 +27,9 @@ related: [proc.arrancar]
 
 Expone una aplicación del Swarm a internet a través de un **Cloudflare Tunnel**, aprovisionado íntegramente desde la API de Cloudflare, sin abrir ningún puerto entrante en el servidor. El tráfico HTTP llega a Cloudflare y baja por un túnel **saliente** que `cloudflared` mantiene abierto; el firewall sigue dejando entrar solo SSH.
 
-Crea **un túnel por entorno** (`prod` y `test`), cada uno con su token y su registro DNS. Todo se ejecuta **en tu máquina local** contra la API de Cloudflare; no toca el servidor.
+Crea **un túnel por entorno** —`prod` (uno para el equipo) y `test` (**uno por developer**: `${APP}-test-<dev>`)—, cada uno con su token y su registro DNS. Todo se ejecuta **en tu máquina local** contra la API de Cloudflare; no toca el servidor.
+
+> **Quién corre qué.** El primer developer aprovisiona `prod` **y** su propio `test`. Cada compañero que se suma corre esta guía **solo con `ENV=test`** (su propio túnel y hostname); `prod` ya existe y no se recrea.
 
 Asume que ya tienes:
 
@@ -115,7 +117,7 @@ El `TUNNEL_TOKEN` autentica al conector contra Cloudflare: es un secreto real. *
 
 ## Camino verificado
 
-El procedimiento ejecutado, ya depurado. Comandos genéricos: parametriza `APP`, `BASE_DOMAIN` y `ENV` para tu caso. Recorre la guía una vez con `ENV=prod` y otra con `ENV=test`.
+El procedimiento ejecutado, ya depurado. Comandos genéricos: parametriza `APP`, `BASE_DOMAIN` y `ENV` para tu caso. El primer developer lo recorre con `ENV=prod` y con `ENV=test`; los que se suman después, **solo con `ENV=test`** (su propio túnel per-dev — `prod` ya está aprovisionado).
 
 ### Paso 1 — Preparar credenciales y derivar los IDs de cuenta y zona
 
@@ -253,7 +255,7 @@ El `deploy.sh` lee ese `TUNNEL_TOKEN` y lo materializa como el Docker secret `${
 
 ### Paso 7 — Repetir para el otro entorno
 
-Vuelve al Paso 2 con `ENV=test` y recorre los Pasos 3 a 6. Cada entorno obtiene **su propio túnel, su propio token y su propio CNAME**; `prod` y `test` quedan aislados y pueden correr en entornos separados (el servidor y tu máquina local).
+Si sos el primer developer, vuelve al Paso 2 con `ENV=test` y recorre los Pasos 3 a 6 (con `DEV_LABEL` seteado a tu usuario). Cada entorno obtiene **su propio túnel, su propio token y su propio CNAME**; `prod` y `test` quedan aislados y pueden correr en máquinas separadas (el servidor y tu máquina local). Los compañeros que se suman **solo** hacen la pasada `ENV=test` con su propio `DEV_LABEL`: `prod` ya existe, no se recrea.
 
 ### Paso 8 — Verificación final
 

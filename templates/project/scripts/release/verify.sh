@@ -6,7 +6,7 @@
 # Usage: verify.sh [production|preview]
 #   Without an argument: production — UNLESS STACK/PUBLIC_HOST are preset to
 #   the test stack (the /forja:deploy preview flow runs
-#   `STACK=<app>_test PUBLIC_HOST=dev-... verify.sh`), which selects preview
+#   `STACK=<app>_test PUBLIC_HOST=<dev>-... verify.sh`), which selects preview
 #   so the docker context stays LOCAL.
 #
 # Env:

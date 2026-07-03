@@ -263,25 +263,26 @@ una **escalación del dial** cuyo disparador es que el deploy vuelva al CI o apa
 multi-nodo; su costo probado está documentado en la
 [lección del pipeline por tag](./08_how-to-pipeline-cicd.md#lección-verificada-el-pipeline-por-tag).
 
-### Un túnel, un conector: la convivencia dev-local
+### Un túnel, un conector
 
-Un túnel de Cloudflare admite **un solo conector a la vez**. El token de un entorno es el
-mismo viva donde viva el `cloudflared` que lo use, así que si dos conectores arrancan con
-ese token (servidor y máquina local), ambos sirven el mismo túnel, las conexiones compiten
-y el tráfico de `${APP}.<dominio>` se parte de forma impredecible. Por eso, para levantar
-el entorno de test en local hay que **bajar primero su stack del servidor**: retirar el
-stack (`docker -c ${APP}-prod stack rm ${STACK}`) y sus secrets
-(`docker -c ${APP}-prod secret rm ${STACK}_<clave-secret> ...`). Con el conector del
-servidor apagado, el túnel queda libre para el `cloudflared` local en exclusiva. Es
-consecuencia de que el túnel es un recurso único: un túnel, un conector. El procedimiento
-ejecutado de esta transición está en
-[Desplegar el stack en Swarm](./06_how-to-desplegar-swarm.md).
+Un túnel de Cloudflare admite **un solo conector a la vez**: dos `cloudflared` que arranquen
+con el mismo token sirven el mismo túnel, las conexiones compiten y el tráfico se parte de
+forma impredecible. De ahí que los túneles estén **segmentados**: `prod` tiene el suyo
+(servido desde el servidor) y **cada developer tiene el suyo para test** (`${APP}-test-<dev>`,
+servido desde su máquina local, con su token en su `secrets/test.env`). Así el conector de
+cada túnel vive en un solo lugar por diseño y nadie compite por el mismo recurso. Si alguna
+vez hay que **mover un mismo entorno entre máquinas** (p. ej. bajar un test que quedó
+corriendo en otro context), primero se retira del origen —stack (`docker -c <ctx> stack rm
+${STACK}`) y secrets— para dejar el túnel libre antes de levantarlo en el destino. El
+procedimiento ejecutado está en [Desplegar el stack en Swarm](./06_how-to-desplegar-swarm.md).
 
 ### Subdominios de un solo nivel
 
-Los hostnames del proyecto (`${APP}.<dominio>`, `dev-${APP}.<dominio>`) son labels de un
+Los hostnames del proyecto (`${APP}.<dominio>`, `<dev>-${APP}.<dominio>`) son labels de un
 solo nivel y los cubre el Universal SSL de Cloudflare. Un subdominio multinivel
-(`x.y.<dominio>`) exigiría un Advanced Certificate; se evita.
+(`x.y.<dominio>`) exigiría un Advanced Certificate; se evita. El label per-developer de test
+(`aguerodev-${APP}`, `dev-${APP}`, …) sigue siendo una sola etiqueta con guiones, así que
+cae dentro del comodín gratuito.
 
 ### Logs del stack acotados en tamaño
 
@@ -320,7 +321,7 @@ con el dial de observabilidad se definen una sola vez en
 - Con un solo nodo, el modelo canónico es build-on-node + 3 servicios: la imagen se
   construye donde corre. GHCR es la entrada del dial para cuando el build deje de ocurrir
   en la máquina que despliega (deploy vía CI o multi-nodo).
-- Un túnel admite un solo conector: para correr un entorno en local hay que bajar su stack
-  del servidor primero.
+- Un túnel admite un solo conector: por eso `prod` y el test de cada developer son túneles
+  separados; mover un mismo entorno entre máquinas exige bajarlo del origen primero.
 - Los logs van acotados por servicio: en un nodo único, logs sin tope llenan el disco y
   tiran la `app` y PostgreSQL.

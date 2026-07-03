@@ -12,7 +12,9 @@
 #   - env_ctx production|preview   (aliases: prod, test)
 #       production -> STACK=<app>_prod   PUBLIC_HOST=<publicName>.<domain>
 #                     export DOCKER_CONTEXT=<dockerContext from .forja.json>
-#       preview    -> STACK=<app>_test   PUBLIC_HOST=dev-<publicName>.<domain>
+#       preview    -> STACK=<app>_test   PUBLIC_HOST=<dev>-<publicName>.<domain>
+#                     (<dev> = git config forja.devUser, lowercase; fallback
+#                     "dev" for a single developer)
 #                     unset DOCKER_CONTEXT (an inherited context must NEVER
 #                     redirect a test deploy to the production node)
 #       Also exports ENV_NAME (production|preview) and TAG_PREFIX (prod|test),
@@ -129,6 +131,11 @@ env_ctx() {
       # gh login); "dev" is the single-developer fallback. Each dev runs
       # their own local Swarm + tunnel, so hostnames must not collide.
       _dev_label="$(git config --get forja.devUser 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+      # Same charset discipline as the .forja.json fields: a hand-set value
+      # with spaces/underscores would silently produce an invalid DNS label.
+      if [ -n "${_dev_label}" ] && ! printf '%s' "${_dev_label}" | grep -Eq '^[a-z0-9-]+$'; then
+        fail "invalid forja.devUser '${_dev_label}' (expected [a-z0-9-]; fix: git config --local forja.devUser <github-login>)"
+      fi
       PUBLIC_HOST="${_dev_label:-dev}-${PUBLIC_NAME}.${DOMAIN}"
       unset _dev_label
       TAG_PREFIX="test"

@@ -241,7 +241,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | contrato del proveedor consumido (sexta capa del dial: cassettes MSW/nock versionadas + job nightly, mock-from-spec con Prism, Pact) | `arq.testing` |
 | controles CIS deliberadamente fuera del dial, con control alternativo declarado | `ops.seguridad-operativa` |
 | convención de glosario (definición en una frase + puntero al doc que lo desarrolla) | `fund.glosario` |
-| convención de hostnames por entorno (${PUBLIC_NAME}.<dominio> prod; dev-${PUBLIC_NAME}.<dominio> test) | `ops.entornos-imagen` |
+| convención de hostnames por entorno (${PUBLIC_NAME}.<dominio> prod; <dev>-${PUBLIC_NAME}.<dominio> test, con <dev> = git config forja.devUser, fallback dev) | `ops.entornos-imagen` |
 | convención de nombre ${STACK}_<clave en minúscula> | `ops.secretos` |
 | convención sobre configuración (la convención vive en una herramienta, no en prosa) | `fund.principios` |
 | cookie de sesión HttpOnly + Secure + SameSite=Lax | `arq.auth` |
@@ -442,7 +442,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | referencia verificada de aprovisionamiento | `ops.aprovisionar` |
 | regla de modelado | `arq.convenciones` |
 | regla de polling del estado de la task para jobs one-shot | `ops.pipeline-cicd` |
-| regla de un solo conector (bajar el entorno de test del servidor antes de levantarlo en local) | `ops.desplegar-swarm` |
+| regla de un solo conector (prod y el test de cada developer son túneles separados; mover un entorno entre máquinas exige bajarlo del origen primero) | `ops.desplegar-swarm` |
 | regla un backup que nunca restauraste no es un backup | `ops.backups` |
 | reglas de commit (Conventional Commits tipo(scope): imperativo; un commit = unidad de trabajo revisable; sin atribución de IA; commitlint es dial) | `proc.trabajo-ia` |
 | reglas operativas del agente (wiki/rules/ dentro del plugin forja, impuestas por hooks del plugin) | `proc.trabajo-ia` |
