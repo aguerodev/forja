@@ -73,7 +73,7 @@ case "${CLOUD_TOKEN}" in
   ENGRAM_CLOUD_OK) CLOUD_NOTE="Memoria de equipo (engram-cloud): conectada." ;;
   ENGRAM_CLOUD_RECOMMEND:not_enrolled) CLOUD_NOTE="engram-cloud casi listo: enrolá el proyecto — engram cloud enroll <proyecto>." ;;
   ENGRAM_CLOUD_RECOMMEND:cli_missing|ENGRAM_CLOUD_RECOMMEND:cli_no_cloud) CLOUD_NOTE="engram-cloud recomendado para memoria de equipo: instalá/actualizá el binario engram con soporte cloud." ;;
-  ENGRAM_CLOUD_RECOMMEND:auth) CLOUD_NOTE="engram-cloud: token inválido — exportá ENGRAM_CLOUD_TOKEN (o /forja:doctor)." ;;
+  ENGRAM_CLOUD_RECOMMEND:auth) CLOUD_NOTE="engram-cloud: token inválido — exportá ENGRAM_CLOUD_TOKEN en ~/.zshenv (NO ~/.zshrc: los hooks corren en shell no-interactivo), o /forja:doctor." ;;
   ENGRAM_CLOUD_RECOMMEND:unreachable) CLOUD_NOTE="engram-cloud configurado pero no pude verificarlo (¿server u offline?) — /forja:doctor." ;;
   ENGRAM_CLOUD_RECOMMEND:*) CLOUD_NOTE="engram-cloud recomendado para compartir memoria de equipo: engram cloud config --server <url> (o /forja:doctor)." ;;
   *) CLOUD_NOTE="" ;;
