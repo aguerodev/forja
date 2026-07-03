@@ -490,7 +490,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | src/ (raíz del código importable), src/app/ (cableado fino al framework), src/core/, src/features/, src/shared/, tests/, e2e/ | `arq.estructura-repo` |
 | src/components/ui/ (primitivas globales) vs features/<feature>/components/ (específicas de feature) | `arq.estructura-repo` |
 | SSE como feature deliberada (entrada del dial: Route Handler con ReadableStream; push unidireccional servidor->cliente) | `fund.principios` |
-| sshd_config.d/99-hardening.conf (PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -t; reload ssh) | `ops.endurecer-acceso` |
+| sshd_config.d/00-hardening.conf (00- gana precedencia sobre 50-cloud-init.conf; PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -T efectivo; reload ssh) | `ops.endurecer-acceso` |
 | stack deploy no remueve servicios eliminados del yml (retirar un servicio = quitarlo del yml + docker service rm manual) | `ops.desplegar-swarm` |
 | staging riel (ENV=test precableado en deploy.sh, off por defecto; el pipeline vive en ops.pipeline-cicd) | `ops.entornos-imagen` |
 | start-first | `ops.modelo-operacion` |

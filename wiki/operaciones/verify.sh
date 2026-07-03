@@ -106,6 +106,11 @@ docker info 2>/dev/null | grep -q "Swarm: active" \
   && pass "Swarm: active" || fail "Swarm NO esta activo"
 docker node ls 2>/dev/null | grep -q "Leader" \
   && pass "nodo es Leader (manager)" || fail "no se ve nodo Leader"
+# deploy debe operar Docker sin sudo: lo suma provision.sh (phase_deploy_docker_group).
+# Sin esto 'docker node ls' como deploy falla aunque todo lo demas pase.
+id -nG "${DEPLOY_USER}" 2>/dev/null | tr ' ' '\n' | grep -qx docker \
+  && pass "${DEPLOY_USER} en el grupo docker (opera Docker sin sudo)" \
+  || fail "${DEPLOY_USER} NO esta en el grupo docker (usermod -aG docker ${DEPLOY_USER})"
 
 # ── Fase 10: fail2ban activo + ban FUNCIONAL ────────────────────────────────
 sect "fail2ban (activo + ban funcional)"

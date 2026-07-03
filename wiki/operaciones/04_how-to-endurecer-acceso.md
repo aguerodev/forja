@@ -11,7 +11,7 @@ provides:
   - "sudoers.d NOPASSWD / visudo -cf"
   - "ufw (default deny incoming, allow outgoing, allow 22/tcp)"
   - "fail2ban backend=systemd (no hay auth.log; jail.local)"
-  - "sshd_config.d/99-hardening.conf (PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -t; reload ssh)"
+  - "sshd_config.d/00-hardening.conf (00- gana precedencia sobre 50-cloud-init.conf; PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -T efectivo; reload ssh)"
   - "grupo docker == root en el host (modelo de seguridad)"
   - "antipatrón de restringir la clave SSH a un solo comando (falsa seguridad, rompe el pipeline)"
   - "inversión del modelo (acota quién puede ser deploy, no qué puede hacer deploy con Docker)"
@@ -290,10 +290,11 @@ port    = 22
 
 `ignoreip` es la defensa directa contra el **auto-ban del operador**: con auth solo-por-clave, un `ssh` con la identidad equivocada o un job de CI que erra acumula 5 fallos y se auto-banea a nivel firewall, dejándote fuera igual que el autobloqueo de SSH. El loopback y el CIDR de administración quedan exentos. Si tu IP de oficina es dinámica y no tenés un CIDR estable, dejá solo loopback y compensá con el runbook de des-baneo (abajo); ante un lockout total, el break-glass es el Rescue System (Paso 7).
 
-Habilita el servicio (no hace falta `restart`: `--now` ya lo arranca; para cambios posteriores usa `reload`, que no corta el jail):
+Habilita el servicio y aplícalo con `restart` (NO `reload`): en una instalación fresca el paquete ya arrancó con su config por defecto y el `reload` **no** re-ejecuta el `actionstart` de la acción `nftables`, así que la tabla `f2b-table` nunca se crea y el ban no llega a `nft`. El `restart` reinicializa la acción:
 
 ```bash
-systemctl enable --now fail2ban
+systemctl enable fail2ban
+systemctl restart fail2ban
 ```
 
 Verifica que esté activo y vigilando SSH:
@@ -313,7 +314,7 @@ nft list ruleset | grep 203.0.113.7
 fail2ban-client set sshd unbanip 203.0.113.7
 ```
 
-La IP de prueba debe aparecer en el set de `nft` tras el `banip` y desaparecer tras el `unbanip`. Si **no** aparece, el `banaction` no está actuando: confirma `banaction = nftables-multiport` y recarga con `systemctl reload fail2ban`.
+La IP de prueba debe aparecer en el set de `nft` tras el `banip` y desaparecer tras el `unbanip`. Si **no** aparece, el `banaction` no está actuando: confirma `banaction = nftables-multiport` y reinicia con `systemctl restart fail2ban` (un `reload` no reinicializa la acción `nftables` sobre una config recién escrita — por eso el `restart`).
 
 > **Runbook de des-baneo.** Si una IP legítima quedó baneada: `fail2ban-client set sshd unbanip <IP>` y confirma con `fail2ban-client status sshd`. Si te baneaste a vos mismo y perdiste SSH, reconectá **desde otra IP** (hotspot, VPN) y corré el `unbanip`, o esperá a que expire el `bantime`. Si además perdiste toda vía de acceso, el break-glass es el **Rescue System** del proveedor (Paso 7); la VNC no sirve acá porque las cuentas están bloqueadas.
 >
@@ -459,7 +460,7 @@ ssh deploy@<IP-o-host>
 
 La verificación de los pasos anteriores es **auto-atestación**: prueba que cada control que pensaste aplicar quedó aplicado, pero no detecta lo que el procedimiento no contempló. Cierra con una auditoría **independiente** y evidencia fechada fuera del host.
 
-Corre `verify.sh` (las post-condiciones codificadas: `ufw status`, `sshd -T`, `fail2ban-client status sshd`, ban funcional, `sysctl`, `passwd -S deploy`, timers habilitados) y luego un escaneo de Lynis como gate:
+Corre `verify.sh` (las post-condiciones codificadas: `ufw status`, `sshd -T` efectivo, `passwd -S root` bloqueada, `fail2ban-client status sshd` + ban funcional en `nft`, rotación de logs de Docker, Swarm activo, `deploy` en el grupo docker, timers habilitados) y luego un escaneo de Lynis como gate:
 
 ```bash
 ./verify.sh
