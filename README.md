@@ -8,15 +8,21 @@ La idea central: la doctrina **no se copia a cada proyecto** — viaja dentro de
 
 **Requisito:** [Claude Code](https://claude.com/claude-code) instalado. El repo es público, así que **no hace falta autenticación** para instalar el plugin.
 
-Dentro de una sesión de Claude Code, corré estos dos comandos:
+Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez** (cada uno en su propio prompt — NO los pegues juntos, se concatenan en un solo comando inválido):
+
+**1. Registrá el marketplace** (lee `.claude-plugin/marketplace.json` de la rama `main`, la última versión estable):
 
 ```
 /plugin marketplace add aguerodev/forja
-/plugin install forja@forja
 ```
 
-- La **primera** línea registra el marketplace (lee `.claude-plugin/marketplace.json` de la rama `main`, que es la última versión estable publicada).
-- La **segunda** instala el plugin `forja` desde ese marketplace.
+> Si el shorthand `aguerodev/forja` te da error, usá la URL completa: `/plugin marketplace add https://github.com/aguerodev/forja.git`
+
+**2. Instalá el plugin** (esperá a que el paso 1 confirme primero):
+
+```
+/plugin install forja@forja
+```
 
 **Verificá que quedó instalado:** corré `/forja:doctor` — debería listar el diagnóstico del entorno. Si escribís `/forja:` y aparecen `init`, `deploy`, `rollback`, `status`, `doctor` en el autocompletado, ya está.
 
