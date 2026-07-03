@@ -16,8 +16,10 @@ provides:
   - "procedimiento de rotación"
   - "nombre corto (target) vs nombre completo (<stack>_<nombre>)"
   - "chequeo por estado del spec (no por sleep temporizado)"
+  - "compartición de secretos del equipo vía gestor (materialización local, no compartir archivos; global sin carpeta vs proyecto con carpeta = app)"
+  - "anti-patrón de anotar secretos en engram (sincroniza a un server compartido y commitea chunks a git: fuga al equipo y al historial)"
 reads-before: [ops.modelo-operacion]
-related: [arq.estructura-repo, arq.convenciones]
+related: [arq.estructura-repo, arq.convenciones, ops.onboarding-secretos]
 ---
 
 # Secretos
@@ -36,6 +38,25 @@ La regla portable: qué es un secret, cómo se nombra y por qué esa convención
 - **Materialización.** `deploy.sh` lee `secrets/<env>.env` y crea un Docker secret por cada línea, con el nombre `${STACK}_<clave_en_minuscula>`, **solo si no existe** (los secrets son inmutables). Esta creación condicional es lo que hace al deploy idempotente.
 - **Montaje.** El `stack.yml` referencia esos secrets como `external: true` y los monta con un `target` (el nombre del archivo en `/run/secrets/`). El secret `${STACK}_<clave>` se monta como `/run/secrets/<clave>`.
 - **Lectura.** El módulo `config` (un schema Zod que lee `/run/secrets`) toma `/run/secrets/<clave>` y lo valida contra el campo `<clave>` del schema.
+
+### Compartición entre developers: el gestor del equipo
+
+La fuente local (`secrets/<env>.env`, `~/.cf_provision.env`) resuelve *tu* máquina, pero no responde una pregunta de equipo: **cuando entra un developer nuevo, ¿de dónde saca los secretos?** No se los pasás por chat de a uno ni le mandás tus archivos. El canal es un **gestor de secretos del equipo** (Bitwarden CLI): la única copia compartida vive cifrada ahí, y cada quien la **materializa** en su máquina.
+
+El principio rector reparte tres canales que nunca se cruzan:
+
+> **`engram` = el saber · el gestor = el secreto · `git` = el código.**
+
+Cada cosa viaja por su carril. El conocimiento (decisiones, gotchas) va a engram; el código va a git; **el valor de un secreto vive SOLO en el gestor**. Mezclarlos es la fuga.
+
+**Dos alcances, por cómo se organiza el vault:**
+
+- **Global (sin carpeta).** API keys compartidas entre proyectos: el token de Cloudflare, el de engram-cloud. Items con nombre estable en la raíz del vault, sin carpeta. Se materializan siempre.
+- **Del proyecto (carpeta = `app`).** Secretos específicos: `secrets/prod.env`, la clave SSH del backup. Viven en la carpeta del vault cuyo nombre es el `app` de `.forja.json`. La carpeta desambigua items homónimos entre proyectos y acota el acceso al que corresponde.
+
+**Materialización, no compartir archivos.** Nadie envía su `secrets/prod.env` por un canal lateral. El equipo declara *qué* materializa en un mapa versionado y **sin valores** —`secrets/secrets-map.json` (`{ item, field, dest, as }`)— y un script (`scripts/materialize-secrets.sh`) lo lee del gestor en runtime y lo escribe en su lugar local. El mapa se commitea; los valores nunca. El runbook por developer, la frontera humano/agente y el bootstrap del vault están en [Onboarding de secretos](./13_how-to-onboarding-secretos.md).
+
+**ANTI-PATRÓN — PROHIBIDO anotar un secreto en engram.** Un token, una contraseña, una clave privada: **nunca** en una observación de memoria. La memoria de equipo sincroniza a un server compartido **y** commitea sus chunks a `.engram/` en git — anotar una credencial ahí la filtra por partida doble: al equipo entero y al historial de git, los dos lugares de los que un secreto no se borra de verdad. Engram guarda el **saber sobre** el secreto (que existe, dónde vive, cómo rotarlo), jamás su valor. El valor solo en el gestor. (engram redacta lo envuelto en `<private>…</private>`, pero esa red no es una licencia para tipear secretos: la regla es no escribirlos.)
 
 ### El contrato de nombre
 

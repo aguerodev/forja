@@ -58,6 +58,7 @@ const RECIPES = {
   desplegar: ["ops.pipeline-cicd"],
   rollback: ["ops.pipeline-cicd"],
   "arrancar-proyecto": ["proc.arrancar", "proc.requerimientos"],
+  "onboarding-secretos": ["ops.onboarding-secretos"],
   "operar-servidor": [
     "ops.seguridad-operativa",
     "ops.backups",

@@ -21,8 +21,8 @@
 | 0 | Fundamentos | 3 |
 | 1 | Proceso | 5 |
 | 2 | Arquitectura | 8 |
-| 3 | Operaciones | 12 |
-| | **Total** | **28** |
+| 3 | Operaciones | 13 |
+| | **Total** | **29** |
 
 ## Docs por tier
 
@@ -69,6 +69,7 @@
 | `ops.exponer-tunnel` | Exponer la app por Cloudflare Tunnel | how-to | both | `operaciones/05_how-to-exponer-cloudflare-tunnel.md` |
 | `ops.gestion-infra` | Gestionar la infraestructura vía la API de Hetzner | how-to | both | `operaciones/12_how-to-gestionar-infra-via-api.md` |
 | `ops.modelo-operacion` | Modelo de operación | explicacion | both | `operaciones/01_explicacion-modelo-operacion.md` |
+| `ops.onboarding-secretos` | Onboarding de secretos (gestor del equipo) | how-to | both | `operaciones/13_how-to-onboarding-secretos.md` |
 | `ops.pipeline-cicd` | Release por comando y CI de gates | how-to | both | `operaciones/08_how-to-pipeline-cicd.md` |
 | `ops.resetear-password` | Resetear la contraseña de un usuario | how-to | both | `operaciones/11_how-to-resetear-password.md` |
 | `ops.secretos` | Secretos | referencia | both | `operaciones/07_referencia-secretos.md` |
@@ -111,6 +112,7 @@ graph TD
     ops_exponer_tunnel["ops.exponer-tunnel"]
     ops_gestion_infra["ops.gestion-infra"]
     ops_modelo_operacion["ops.modelo-operacion"]
+    ops_onboarding_secretos["ops.onboarding-secretos"]
     ops_pipeline_cicd["ops.pipeline-cicd"]
     ops_resetear_password["ops.resetear-password"]
     ops_secretos["ops.secretos"]
@@ -151,6 +153,7 @@ graph TD
   ops_modelo_operacion --> ops_secretos
   ops_secretos --> ops_backups
   ops_secretos --> ops_desplegar_swarm
+  ops_secretos --> ops_onboarding_secretos
   ops_secretos --> ops_pipeline_cicd
   ops_secretos --> ops_resetear_password
   ops_secretos --> ops_seguridad_operativa
@@ -171,6 +174,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | .next/standalone con .next/static y public/ copiados aparte | `ops.entornos-imagen` |
 | @apply prohibido en componentes | `arq.estilos-frontend` |
 | <provider>.adapter.ts (adaptador de EGRESO, uno por proveedor; canonización del casillero por la regla de tres) | `arq.estructura-repo` |
+| ~/.bw_secrets (archivo local del gestor fuera del repo, chmod 600, custodiado por EL HUMANO, jamás a git ni al agente) | `ops.onboarding-secretos` |
 | ~/.cf_provision.env / umask 077 | `ops.exponer-tunnel` |
 | accesibilidad (WCAG 2.2 AA baseline, --tk-ring, contraste OKLCH verificado en CI, vitest-axe, @axe-core/playwright) | `arq.estilos-frontend` |
 | Actor | `arq.convenciones` |
@@ -180,6 +184,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | alcance por proyecto (regla del síntoma inverso; piso: dominio puro + check + slice) | `fund.principios` |
 | anclas estables (wiki + convenciones + errores explícitos como memoria del agente) | `proc.trabajo-ia` |
 | anti brute-force de base (throttle/lockout en login y reset) | `arq.auth` |
+| anti-patrón de anotar secretos en engram (sincroniza a un server compartido y commitea chunks a git: fuga al equipo y al historial) | `ops.secretos` |
 | anti-replay de webhook (timestamp firmado dentro del HMAC + ventana de tolerancia ~5 min; control separado del dedupe del inbox) | `arq.auth` |
 | antipatrón de restringir la clave SSH a un solo comando (falsa seguridad, rompe el pipeline) | `ops.endurecer-acceso` |
 | aprovisionamiento como artefacto ejecutable (provision.sh idempotente + verify.sh post-condiciones + user_data.yaml; el script es la verdad) | `ops.aprovisionar` |
@@ -202,10 +207,13 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / break-glass = Rescue System del proveedor (root queda bloqueada; no consola-con-password) | `ops.endurecer-acceso` |
 | biome.json | `arq.gates-tooling` |
 | bloqueo optimista | `arq.convenciones` |
+| bootstrap del vault de secretos (import de JSON de Bitwarden una vez / bw create por API) | `ops.onboarding-secretos` |
 | bootstrap local (nvm + corepack + pnpm install + secretos dev + postgres:17 + db:migrate + next dev) | `ops.entornos-imagen` |
 | borde HTTP | `arq.hexagonal` |
 | bucle apretado de señales (tipos + tests + linters como canal de control del agente) | `proc.trabajo-ia` |
 | build-on-node sin registry | `ops.modelo-operacion` |
+| búsqueda por carpeta del vault (folder == app de .forja.json) para desambiguar los items de prod | `ops.onboarding-secretos` |
+| BW_SESSION heredado del entorno (nunca --session por argumento: aparecería en ps) | `ops.onboarding-secretos` |
 | cache de Cloudflare por URL fingerprinteada | `ops.exponer-tunnel` |
 | caching escalado por niveles (entrada del dial: Next Data Cache entre requests -> Redis como puerto compartido entre instancias) | `fund.principios` |
 | cadena de artefactos software_requirements/ -> claude_design/ -> openspec/ | `proc.sdd` |
@@ -229,6 +237,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | columna version en entidad mutable (dial: entra con la escritura concurrente real, no por default) | `arq.convenciones` |
 | comandos de verificación del stack (stack ls / stack services / secret ls) | `ops.desplegar-swarm` |
 | comandos del operador en el plugin forja (deploy y rollback; scripts deterministas en el proyecto) | `ops.pipeline-cicd` |
+| compartición de secretos del equipo vía gestor (materialización local, no compartir archivos; global sin carpeta vs proyecto con carpeta = app) | `ops.secretos` |
 | composition root formal y Unidad de Trabajo withTransaction(fn) — entrada del dial | `arq.hexagonal` |
 | concerns transversales con I/O como puerto (feature flags/audit/i18n/cache de lectura; default seguro; FeatureDisabledError) | `arq.convenciones` |
 | concurrency (cancel-in-progress true para check; los deploys no se serializan en CI porque el ship es manual y humano) | `ops.pipeline-cicd` |
@@ -331,6 +340,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | Gitflow multi-agente (main producción, develop integración, features cortas; solo main despliega vía /forja:deploy) | `proc.trabajo-ia` |
 | glosario maestro (índice alfabético de términos con enlace a la fuente canónica) | `fund.glosario` |
 | golden snapshot del base endurecido (atajo de RTO: rebuild desde imagen en minutos; no respalda datos) | `ops.aprovisionar` |
+| gotcha de la papelera de bw (los borrados van a papelera: verificar bw list items y --trash) | `ops.onboarding-secretos` |
 | gotchas de acceso al Storage Box (se prueba desde el nodo; DNS sin propagar) | `ops.backups` |
 | grupo docker == root en el host (modelo de seguridad) | `ops.endurecer-acceso` |
 | guarda de dump no vacío (pg_dump de cero bytes aborta la migración; un dump vacío no es respaldo) | `ops.backups` |
@@ -370,6 +380,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | logging y telemetría seguros | `arq.convenciones` |
 | los tres significados de \"app\" | `arq.estructura-repo` |
 | mapa de lectura mínima (los cuatro docs para una sesión fresca) | `proc.arrancar` |
+| mapa declarativo secrets/secrets-map.json (versionado, sin valores; entradas as env\|envfile\|file) | `ops.onboarding-secretos` |
 | mapeo Schema.parse como único cruce row->contrato | `arq.convenciones` |
 | marcas [SUPUESTO] / [PENDIENTE] / [DECISIÓN ABIERTA] | `proc.requerimientos` |
 | matriz autonomo/human-confirmed/prohibido de operaciones de infra | `ops.gestion-infra` |
@@ -460,11 +471,13 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | rollback multi-versión (tags post-health, descripción por commit, regreso con latest) | `ops.pipeline-cicd` |
 | rotación del identificador de sesión | `arq.auth` |
 | Row-Level Security de PostgreSQL (entrada del dial: aislar filas por tenant cuando aparece multi-tenancy real) | `fund.principios` |
+| runbook de onboarding de secretos por developer (instalar bw, apuntar al server, desbloquear BW_SESSION, materializar) | `ops.onboarding-secretos` |
 | runbook de recuperación ante desastre | `ops.aprovisionar` |
 | salvaguardas del deploy (working tree sucio, confirmación explícita; secrets: preflight blando + aserción dura REQUIRED_SECRETS contra el swarm) | `ops.pipeline-cicd` |
 | scaffold: estado real (generador de features pendiente, se copia la forma de un slice) y objetivo pnpm plop feature con flags condicionales | `arq.gates-tooling` |
 | scopes/permisos como autorización | `arq.convenciones` |
 | scripts test:integration/test:mutation/test:contract | `arq.gates-tooling` |
+| scripts/materialize-secrets.sh (materializa el mapa desde el gestor; --prod agrega los items del proyecto) | `ops.onboarding-secretos` |
 | sdd-init | `proc.sdd` |
 | searchParamsSchema validado en la page antes del service (sort/dir sobre allowlist de columnas; pageSize con .max() acotado) | `arq.convenciones` |
 | secretos placeholder en la etapa builder (dummies en /run/secrets para next build, borrados en la misma capa) | `ops.entornos-imagen` |
@@ -507,6 +520,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | tipado estricto | `arq.convenciones` |
 | TLS mode Full / etiqueta única con guion | `ops.exponer-tunnel` |
 | toHttpResponse | `arq.convenciones` |
+| token de servicios de hooks en ~/.zshenv y no ~/.zshrc (los hooks corren en shells no interactivos) | `ops.onboarding-secretos` |
 | token scoped | `ops.exponer-tunnel` |
 | token-file para cloudflared | `ops.modelo-operacion` |
 | tokens en dos capas (primitivas privadas --tk-* + @theme inline) | `arq.estilos-frontend` |
@@ -600,6 +614,15 @@ Entrada: `proc.arrancar`, `proc.requerimientos` — 7 docs.
 5. `proc.sdd` — SDD, flujo de especificación y Gentle AI _(tier 1)_
 6. `proc.arrancar` — Arrancar un proyecto nuevo _(tier 1)_
 7. `proc.requerimientos` — Generar los documentos de requerimientos (spec-doc-interviewer) _(tier 1)_
+
+### `onboarding-secretos`
+
+Entrada: `ops.onboarding-secretos` — 4 docs.
+
+1. `fund.principios` — Principios del proyecto _(tier 0)_
+2. `ops.modelo-operacion` — Modelo de operación _(tier 3)_
+3. `ops.secretos` — Secretos _(tier 3)_
+4. `ops.onboarding-secretos` — Onboarding de secretos (gestor del equipo) _(tier 3)_
 
 ### `operar-servidor`
 

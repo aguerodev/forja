@@ -246,12 +246,12 @@ umask 077
 touch "secrets/${ENV}.env" && chmod 600 "secrets/${ENV}.env"
 # Append idempotente (misma disciplina que authorized_keys en el doc 04): nunca
 # `>` sobre el .env — sobrescribir pisaría el resto de los secrets del archivo.
-grep -q '^TUNNEL_TOKEN=' "secrets/${ENV}.env" \
-  && echo "AVISO: TUNNEL_TOKEN ya existe en secrets/${ENV}.env — si rotaste el túnel, actualiza esa línea a mano" \
-  || printf 'TUNNEL_TOKEN=%s\n' "$TUNNEL_TOKEN" >> "secrets/${ENV}.env"
+grep -q '^tunnel_token=' "secrets/${ENV}.env" \
+  && echo "AVISO: tunnel_token ya existe en secrets/${ENV}.env — si rotaste el túnel, actualiza esa línea a mano" \
+  || printf 'tunnel_token=%s\n' "$TUNNEL_TOKEN" >> "secrets/${ENV}.env"
 ```
 
-El `deploy.sh` lee ese `TUNNEL_TOKEN` y lo materializa como el Docker secret `${STACK}_tunnel_token`, que el `cloudflared` del compose monta en `/run/secrets/tunnel_token`. El patrón `secrets/*.env` está cubierto por `.gitignore`. Trátalo como secreto real: respáldalo en un gestor de contraseñas y no lo subas al repositorio.
+El `deploy.sh` lee esa clave `tunnel_token` y la materializa como el Docker secret `${STACK}_tunnel_token`, que el `cloudflared` del compose monta en `/run/secrets/tunnel_token`. El patrón `secrets/*.env` está cubierto por `.gitignore`. Trátalo como secreto real: respáldalo en un gestor de contraseñas y no lo subas al repositorio.
 
 ### Paso 7 — Repetir para el otro entorno
 
