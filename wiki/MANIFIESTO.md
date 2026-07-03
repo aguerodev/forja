@@ -199,7 +199,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | backup pre-migración (pg_dump -Fc validado con pg_restore --list; aborta el deploy si no valida) | `ops.backups` |
 | backup sidecar del stack (servicio backup en stack.yml: pg_dump diario validado, retención 7 rotando local + Storage Box, clave SSH dedicada) | `ops.backups` |
 | backups del proveedor (snapshots de disco habilitados en Fase 0, ~+20%; atajo de RTO que cubre pgdata y el raft, complemento del dump off-site) | `ops.aprovisionar` |
-| barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / consola de rescate | `ops.endurecer-acceso` |
+| barrera de verificación (probar la puerta nueva antes de cerrar la vieja) / autobloqueo / break-glass = Rescue System del proveedor (root queda bloqueada; no consola-con-password) | `ops.endurecer-acceso` |
 | biome.json | `arq.gates-tooling` |
 | bloqueo optimista | `arq.convenciones` |
 | bootstrap local (nvm + corepack + pnpm install + secretos dev + postgres:17 + db:migrate + next dev) | `ops.entornos-imagen` |
@@ -490,7 +490,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | src/ (raíz del código importable), src/app/ (cableado fino al framework), src/core/, src/features/, src/shared/, tests/, e2e/ | `arq.estructura-repo` |
 | src/components/ui/ (primitivas globales) vs features/<feature>/components/ (específicas de feature) | `arq.estructura-repo` |
 | SSE como feature deliberada (entrada del dial: Route Handler con ReadableStream; push unidireccional servidor->cliente) | `fund.principios` |
-| sshd_config.d/99-hardening.conf (PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -t; reload ssh) | `ops.endurecer-acceso` |
+| sshd_config.d/00-hardening.conf (00- gana precedencia sobre 50-cloud-init.conf; PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes; sshd -T efectivo; reload ssh) | `ops.endurecer-acceso` |
 | stack deploy no remueve servicios eliminados del yml (retirar un servicio = quitarlo del yml + docker service rm manual) | `ops.desplegar-swarm` |
 | staging riel (ENV=test precableado en deploy.sh, off por defecto; el pipeline vive en ops.pipeline-cicd) | `ops.entornos-imagen` |
 | start-first | `ops.modelo-operacion` |
