@@ -75,6 +75,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 - **El contrato es nombre del secret = campo del schema Zod de `src/core/config.ts`.** En prod cada campo es un archivo `/run/secrets/<campo>` (Docker secret); la fuente local es `secrets/<env>.env` (gitignored). Para dev local: copiá `.env.example` a `.env` (gitignored) y completá.
 - **Pedir keys por chat está OK.** Si una tarea necesita una API key que no tenés, pedísela al usuario directamente — lo que no está OK es persistirla fuera del canal correcto.
 - **Token Hetzner Read&Write = break-glass.** No se persiste: se inyecta just-in-time para una operación mutadora aprobada por un humano y se descarta. El loop autónomo opera con el token read.
+- **PROHIBIDO anotar secretos en engram.** Un token/clave en una observación se filtra por partida doble: engram sincroniza a un server compartido Y commitea chunks a git. Engram guarda el saber SOBRE el secreto (que existe, dónde va, cómo se rota), nunca su valor. El valor vive solo en el gestor del equipo; el equipo lo materializa con `scripts/materialize-secrets.sh` desde `secrets/secrets-map.json` (onboarding: doctrina ops/13).
 
 ## Gates (innegociables)
 
