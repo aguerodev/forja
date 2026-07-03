@@ -57,7 +57,7 @@ fi
 # Run in background and kill after N seconds so the hook never hangs offline.
 STATUS_OUT=""
 TMP="$(mktemp 2>/dev/null || printf '/tmp/engram-cloud-%s' "$$")"
-( engram sync --cloud --status --project "${PROJECT}" >"${TMP}" 2>/dev/null ) &
+( engram sync --cloud --status --project "${PROJECT}" >"${TMP}" 2>&1 ) &
 qpid=$!
 waited=0
 while kill -0 "${qpid}" 2>/dev/null; do
