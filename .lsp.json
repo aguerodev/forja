@@ -16,6 +16,9 @@
     "args": ["--stdio"],
     "extensionToLanguage": {
       ".css": "css"
+    },
+    "settings": {
+      "css": { "lint": { "unknownAtRules": "ignore" } }
     }
   },
   "bash": {
