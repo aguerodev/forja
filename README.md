@@ -6,10 +6,39 @@ La idea central: la doctrina **no se copia a cada proyecto** — viaja dentro de
 
 ## Instalación
 
+**Requisito:** [Claude Code](https://claude.com/claude-code) instalado. El repo es público, así que **no hace falta autenticación** para instalar el plugin.
+
+Dentro de una sesión de Claude Code, corré estos dos comandos:
+
 ```
 /plugin marketplace add aguerodev/forja
 /plugin install forja@forja
 ```
+
+- La **primera** línea registra el marketplace (lee `.claude-plugin/marketplace.json` de la rama `main`, que es la última versión estable publicada).
+- La **segunda** instala el plugin `forja` desde ese marketplace.
+
+**Verificá que quedó instalado:** corré `/forja:doctor` — debería listar el diagnóstico del entorno. Si escribís `/forja:` y aparecen `init`, `deploy`, `rollback`, `status`, `doctor` en el autocompletado, ya está.
+
+### Tu primer proyecto
+
+```
+# 1. Creá o entrá a una carpeta vacía y abrí Claude Code ahí
+# 2. Dentro de la sesión:
+/forja:init            # preflight, esqueleto ejecutable, Gitflow, settings de equipo
+# 3. Seguí los próximos pasos que imprime init (entrevista de requerimientos → SDD → deploy)
+```
+
+`/forja:init` deja el `.claude/settings.json` del proyecto apuntando a este marketplace, así que **cualquier compañero que clone el repo y abra Claude Code recibe el plugin sin instalar nada a mano** (Claude Code se lo ofrece al confiar la carpeta).
+
+### Actualizar
+
+```
+/plugin marketplace update forja     # trae la última versión publicada en main
+/plugin install forja@forja          # reinstala si hubo bump de versión
+```
+
+Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **gh**, **engram** (MCP + CLI para memoria de equipo) y **gentle-ai** (SDD). El plugin instala sin ellas; `/forja:doctor` te dice cuáles faltan.
 
 ## Qué recibe el equipo automáticamente
 
