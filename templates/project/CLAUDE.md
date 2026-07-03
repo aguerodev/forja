@@ -59,6 +59,7 @@ Doctrina de ingeniería de la agencia: stack, arquitectura, proceso y operacione
 - **Idioma: español.** La búsqueda de engram (FTS5) no cruza idiomas — las memorias de scope `project` se escriben en español, el idioma del equipo, o nadie las encuentra.
 - **El sync exporta TODO el proyecto, scope `personal` incluido.** Notas verdaderamente personales van en un proyecto engram separado (p. ej. `<tu-usuario>-notes`), nunca en este. Un secreto dentro de una observación se envuelve en `<private>…</private>` — engram lo redacta a `[REDACTED]` antes de guardar.
 - La memoria **complementa** los artefactos versionados (openspec, requerimientos, wiki): registra el porqué y los gotchas; los artefactos siguen siendo la fuente de verdad.
+- **engram-cloud (recomendado, no obligatorio).** Replicación de la memoria de equipo vía un server self-hosted, complementaria al git-sync de `.engram/`. Si no está configurada, `/forja:doctor` la marca `WARN` y el hook de sesión te lo recuerda al arrancar — **nunca bloquea**. Para activarla: `engram cloud config --server <url>` + `engram cloud enroll <app>` (el `<app>` es el `project_name` de `.engram/config.json`); verificá con `engram sync --cloud --status --project <app>` (debe dar `enabled: true`).
 
 ## Colaboración multi-dev
 
