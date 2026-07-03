@@ -47,6 +47,7 @@ echo "== artifact store SDD =="; if [ -d openspec ]; then echo "openspec OK"; el
 echo "== memoria de equipo (engram) =="; node -p 'JSON.parse(require("fs").readFileSync(".engram/config.json","utf8")).project_name' 2>/dev/null || echo "DOCTOR_WARN .engram/config.json ausente"
 git check-ignore -q .engram/engram.db && echo "engram.db gitignoreada OK" || echo "DOCTOR_WARN .engram/engram.db NO esta gitignoreada"
 command -v engram >/dev/null 2>&1 && engram sync --status 2>/dev/null || echo "DOCTOR_INFO sin CLI engram - sync de memoria de equipo inactivo"
+echo "== engram-cloud (memoria de equipo compartida, recomendado) =="; ECT="$("${CLAUDE_PLUGIN_ROOT}/hooks/scripts/engram-cloud-check.sh" 2>/dev/null)"; case "$ECT" in ENGRAM_CLOUD_OK) echo "engram-cloud conectado OK";; ENGRAM_CLOUD_RECOMMEND:*) echo "DOCTOR_WARN engram-cloud ${ECT#ENGRAM_CLOUD_RECOMMEND:} (recomendado configurar para compartir memoria de equipo)";; *) echo "engram-cloud n/a";; esac
 ```
 
 Coherencia: el `project_name` de `.engram/config.json` tiene que coincidir con el `app` de `.forja.json` — si difieren, cada dev exporta a un proyecto de memoria distinto y el equipo se fragmenta.
@@ -64,6 +65,8 @@ Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y co
 - `.engram/config.json` ausente o con `project_name` ≠ `app` → crearlo/corregirlo (`{"project_name": "<app>"}`); pinea la identidad del proyecto para todos los clones.
 - `.engram/engram.db` sin gitignorear → agregar `.engram/engram.db*` al `.gitignore`; si la DB ya quedó TRACKEADA el check falla aunque el patrón exista (check-ignore consulta el índice) — ahí además va `git rm --cached '.engram/engram.db*'` en el próximo commit (la DB local jamás viaja; chunks y manifest sí).
 - `Pending import` > 0 en `engram sync --status` → correr `engram sync --import` (o reabrir la sesión: el hook lo hace solo).
+- engram-cloud `not_configured` (recomendado, no obligatorio) → `engram cloud config --server <url>` + `engram cloud enroll <project>`; verificá con `engram sync --cloud --status --project <project>` (debe dar `enabled: true`). Comparte la memoria de equipo por un server, complementando el git-sync de `.engram/`.
+- engram-cloud otros estados → `not_enrolled`: `engram cloud enroll <project>`. `auth`: exportá un `ENGRAM_CLOUD_TOKEN` válido. `forbidden`: pedí acceso al proyecto en el server. `unreachable`: verificá que el server esté arriba / tu red. `cli_no_cloud`: actualizá el binario engram (tu versión no tiene el subcomando `cloud`).
 - `.forja.json` ausente → `/forja:init` en un directorio nuevo, o crearlo a mano si el proyecto ya existe.
 - sin script `check` → agregar el gate único a `package.json` (doctrina: gates y tooling).
 - settings sin marketplace → agregar `extraKnownMarketplaces`/`enabledPlugins` de forja a `.claude/settings.json`.

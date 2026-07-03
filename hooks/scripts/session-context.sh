@@ -64,6 +64,21 @@ if [ -f "${ROOT}/.engram/manifest.json" ]; then
   fi
 fi
 
+# engram-cloud readiness: a RECOMMENDATION only (never blocks the session).
+# Delegated to the shared detector so doctor and this hook agree. Fail-soft:
+# any failure leaves CLOUD_NOTE empty and the session starts as usual.
+CLOUD_NOTE=""
+CLOUD_TOKEN="$( "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/engram-cloud-check.sh" "${ROOT}" 2>/dev/null || printf '' )"
+case "${CLOUD_TOKEN}" in
+  ENGRAM_CLOUD_OK) CLOUD_NOTE="Memoria de equipo (engram-cloud): conectada." ;;
+  ENGRAM_CLOUD_RECOMMEND:not_enrolled) CLOUD_NOTE="engram-cloud casi listo: enrolá el proyecto — engram cloud enroll <proyecto>." ;;
+  ENGRAM_CLOUD_RECOMMEND:cli_missing|ENGRAM_CLOUD_RECOMMEND:cli_no_cloud) CLOUD_NOTE="engram-cloud recomendado para memoria de equipo: instalá/actualizá el binario engram con soporte cloud." ;;
+  ENGRAM_CLOUD_RECOMMEND:auth) CLOUD_NOTE="engram-cloud: token inválido — exportá ENGRAM_CLOUD_TOKEN (o /forja:doctor)." ;;
+  ENGRAM_CLOUD_RECOMMEND:unreachable) CLOUD_NOTE="engram-cloud configurado pero no pude verificarlo (¿server u offline?) — /forja:doctor." ;;
+  ENGRAM_CLOUD_RECOMMEND:*) CLOUD_NOTE="engram-cloud recomendado para compartir memoria de equipo: engram cloud config --server <url> (o /forja:doctor)." ;;
+  *) CLOUD_NOTE="" ;;
+esac
+
 # Tooling check for the context message.
 MISSING=""
 for t in gentle-ai gh docker hcloud; do
@@ -77,6 +92,7 @@ node -e '
     const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
     const missing = process.argv[2] || "";
     const engramNote = process.argv[3] || "";
+    const cloudNote = process.argv[4] || "";
     const root = process.env.CLAUDE_PLUGIN_ROOT || "";
     const wrapper = root
       ? root + "/bin/hcloud-agent.sh"
@@ -88,6 +104,7 @@ node -e '
       "Deploy SOLO con /forja:deploy; estado del equipo con /forja:status. " +
       "Infra Hetzner: usá " + wrapper + " — nunca hcloud crudo.";
     if (engramNote) msg += " " + engramNote;
+    if (cloudNote) msg += " 💡 " + cloudNote;
     if (missing) msg += " Faltan herramientas: " + missing + " — corré /forja:doctor.";
     if (msg.length > 700) msg = msg.slice(0, 700);
     process.stdout.write(JSON.stringify({
@@ -97,6 +114,6 @@ node -e '
     // Signal the wrapper via exit code; it emits the static degraded banner.
     process.exit(3);
   }
-' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" 2>/dev/null || printf '%s\n' "${DEGRADED_JSON}"
+' "${ROOT}/.forja.json" "${MISSING}" "${ENGRAM_NOTE}" "${CLOUD_NOTE}" 2>/dev/null || printf '%s\n' "${DEGRADED_JSON}"
 
 exit 0

@@ -1,12 +1,18 @@
 {
   "name": "forja",
   "displayName": "Forja",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Doctrina de ingeniería + bootstrap enterprise-grade: wiki, skills, comandos de operador y guardias Gitflow para desarrollar con gentle-ai + engram",
   "author": {
     "name": "aguerodev"
   },
   "repository": "https://github.com/aguerodev/forja",
   "license": "UNLICENSED",
-  "keywords": ["scaffolding", "sdd", "gitflow", "hetzner", "doctrina"]
+  "keywords": [
+    "scaffolding",
+    "sdd",
+    "gitflow",
+    "hetzner",
+    "doctrina"
+  ]
 }
