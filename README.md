@@ -70,7 +70,7 @@ En un proyecto inicializado con `/forja:init`, `.claude/settings.json` referenci
 | `/forja:deploy preview\|production` | Release por fases con scripts deterministas, gates humanos y backup off-site. |
 | `/forja:rollback preview\|production` | Volver a una versión sana; el plano datos es aparte y human-confirmed. |
 | `/forja:status` | Solo lectura: quién está en qué, PRs abiertos, cambios SDD activos, slices libres. |
-| `/forja:doctor` | Diagnóstico de herramientas y conformidad del proyecto, con remediaciones. |
+| `/forja:doctor` | Diagnóstico en dos capas — genérica (herramientas, Gitflow, engram) y de contrato (`commands.*`, `runtime`, Dockerfile) — con remediaciones y migración v1→v2 sugerida. |
 | `/forja:statusline` | Instala la statusline de forja en `~/.claude` (dir │ rama │ modelo │ contexto% │ estado git). El arranque la sugiere si no la tenés. |
 
 ## Skills
@@ -111,3 +111,5 @@ wiki/             la doctrina: 19 docs en 3 tiers + MANIFIESTO derivado
 1. Editá los docs en `wiki/` (frontmatter incluido) en una rama.
 2. Regenerá el índice: `node wiki/_meta/validate-graph.mjs --write` — el `MANIFIESTO.md` es un artefacto derivado, **nunca se edita a mano**.
 3. Corré `node wiki/_meta/validate-graph.mjs --check` — falla si el MANIFIESTO quedó desincronizado — y abrí un PR a este repo.
+
+> **Nota histórica:** la doctrina del stack TS/Next que este plugin traía antes de volverse agnóstico quedó preservada íntegra en el tag `ts-next-doctrine-final` de este repo.
