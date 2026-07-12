@@ -226,6 +226,7 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | Full SSL | `ops.modelo-operacion` |
 | gate en el PR, ship por comando (/forja:deploy) — el CI verifica, no despliega | `ops.pipeline-cicd` |
 | gates de fase (revisión en fronteras, no en cada edición) | `proc.trabajo-ia` |
+| gates de PR del CI del proyecto (mínimo el check del contrato; los demás jobs los define cada proyecto) | `ops.pipeline-cicd` |
 | generación de clave ed25519 local (la clave privada nunca llega al servidor) | `ops.endurecer-acceso` |
 | Gentle AI | `proc.sdd` |
 | gestión remota vía docker context sobre SSH | `ops.modelo-operacion` |
@@ -251,7 +252,6 @@ Cada término tiene UN solo doc dueño (provides global sin solapamiento).
 | inventario consolidado de controles de seguridad operativa (el doc como checklist de referencia) | `ops.seguridad-operativa` |
 | inversión del modelo (acota quién puede ser deploy, no qué puede hacer deploy con Docker) | `ops.endurecer-acceso` |
 | IP derivada de la API (nunca cacheada) | `ops.gestion-infra` |
-| jobs de verificación del CI del proyecto como gates de PR (check del contrato, integration, contract; mutation nightly) | `ops.pipeline-cicd` |
 | journald persistente y capeado (Storage=persistent + SystemMaxUse; base de fail2ban backend=systemd tras reboot) | `ops.aprovisionar` |
 | la capa de dependencias cachea solo el contrato de dependencias (manifest + lockfile) | `ops.entornos-imagen` |
 | las cinco lentes del panel de revisión | `proc.requerimientos` |

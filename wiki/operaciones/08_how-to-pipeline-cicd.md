@@ -19,7 +19,7 @@ provides:
   - "comandos del operador en el plugin forja (deploy y rollback; scripts deterministas en el proyecto)"
   - "interfaz de operación por entorno (/forja:deploy preview|production y /forja:rollback preview|production; preview = swarm local)"
   - "rollback multi-versión (tags post-health, descripción por commit, regreso con latest)"
-  - "jobs de verificación del CI del proyecto como gates de PR (check del contrato, integration, contract; mutation nightly)"
+  - "gates de PR del CI del proyecto (mínimo el check del contrato; los demás jobs los define cada proyecto)"
   - "concurrency (cancel-in-progress true para check; los deploys no se serializan en CI porque el ship es manual y humano)"
   - "deploy vía CI/GitHub Actions como entrada del dial (disparador: más de un operador desplegando a la vez o auditoría de release exigida)"
   - "lección del pipeline por tag (provenance gate + GHCR durable: tres tandas de fixes para un flujo que una persona ejecuta en minutos)"
