@@ -104,7 +104,7 @@ La verificación correcta usa la **URL fingerprinteada** que el browser realment
 Alternativa: verificar directamente dentro del contenedor, evitando la cache por completo:
 
 ```bash
-docker -c <ctx> exec <app_ctr> grep "<token>" /app/.next/static/<chunk>.js
+docker -c <ctx> exec <app_ctr> grep "<token>" <ruta-del-bundle-fingerprinteado-en-la-imagen>
 ```
 
 Si el token aparece, el asset nuevo está desplegado, independientemente de lo que devuelva `curl` por la URL pelada. No corresponde levantar una falsa alarma de deploy fallido basándose solo en la respuesta de la URL sin versionar.

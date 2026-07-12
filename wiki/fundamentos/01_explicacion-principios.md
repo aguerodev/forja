@@ -69,7 +69,7 @@ El test rojo se escribe primero y define qué es "hecho": obliga a decidir qué 
 
 ## Los guardarraíles que importan son ejecutables
 
-La conducta que no puede fallar se codifica como algo que se ejecuta: gate de CI, regla de linter, contrato de tipos, paso de pipeline. La frontera entre "lo deseable" y "lo obligatorio" es la frontera entre lo escrito en prosa y lo codificado en una herramienta. La pureza del dominio no es un consejo: es un gate de dependency-cruiser que rompe el build.
+La conducta que no puede fallar se codifica como algo que se ejecuta: gate de CI, regla de linter, contrato de tipos, paso de pipeline. La frontera entre "lo deseable" y "lo obligatorio" es la frontera entre lo escrito en prosa y lo codificado en una herramienta. La pureza del dominio no es un consejo: es un gate del linter de dependencias del proyecto que rompe el build.
 
 ## Reproducibilidad de punta a punta
 
