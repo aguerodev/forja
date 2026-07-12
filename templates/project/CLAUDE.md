@@ -20,7 +20,7 @@ Doctrina de ingeniería de la agencia: arquitectura, proceso y operaciones para 
 
 ## El plugin forja
 
-- **La doctrina se carga por el skill `forja:doctrina`**, que trae el MANIFIESTO con el índice por tiers y **recetas por tarea** (`nueva-feature`, `desplegar`, `rollback`, `operar-servidor`, `arrancar-proyecto`). Cargá la receta de tu tarea; **NO leas la wiki entera**.
+- **La doctrina se carga por el skill `forja:doctrina`**, que trae el MANIFIESTO con el índice por tiers y **recetas por tarea** (`nueva-feature`, `desplegar`, `rollback`, `operar-servidor`, `arrancar-proyecto`, `onboarding-secretos`). Cargá la receta de tu tarea; **NO leas la wiki entera**.
 - **Comandos del operador**: `/forja:deploy` (release a prod), `/forja:rollback` (dos planos: software barato, datos destructivo y human-confirmed), `/forja:status` (estado del stack y del trabajo), `/forja:doctor` (diagnóstico del entorno).
 - **Guardias activas** (hooks del plugin, no opcionales):
   - Push/commit directo a `main` o `develop` **bloqueado** — todo entra por PR.
@@ -74,7 +74,7 @@ Doctrina de ingeniería de la agencia: arquitectura, proceso y operaciones para 
 ## Secretos
 
 - **REGLA INVIOLABLE: ningún secreto llega a git/GitHub.** Nunca en código, docs, ejemplos, mensajes de commit ni archivos versionados. Si un secreto entró a git alguna vez: se **rota**, no alcanza con borrarlo.
-- **El contrato es nombre del secret = campo del schema de config de la app.** En prod cada campo es un archivo `/run/secrets/<campo>` (Docker secret); la fuente local es `secrets/<env>.env` (gitignored). Para dev local: copiá `env.example` a `.env` (gitignored) y completá.
+- **El contrato es nombre del secret = campo del schema de config de la app.** En prod cada campo es un archivo `/run/secrets/<campo>` (Docker secret); la fuente local es `secrets/<env>.env` (gitignored). Para dev local: copiá `.env.example` a `.env` (gitignored) y completá.
 - **Pedir keys por chat está OK.** Si una tarea necesita una API key que no tenés, pedísela al usuario directamente — lo que no está OK es persistirla fuera del canal correcto.
 - **Token Hetzner Read&Write = break-glass.** No se persiste: se inyecta just-in-time para una operación mutadora aprobada por un humano y se descarta. El loop autónomo opera con el token read.
 - **PROHIBIDO anotar secretos en engram.** Un token/clave en una observación se filtra por partida doble: engram sincroniza a un server compartido Y commitea chunks a git. Engram guarda el saber SOBRE el secreto (que existe, dónde va, cómo se rota), nunca su valor. El valor vive solo en el gestor del equipo; el equipo lo materializa con `scripts/materialize-secrets.sh` desde `secrets/secrets-map.json` (onboarding: doctrina ops/13).

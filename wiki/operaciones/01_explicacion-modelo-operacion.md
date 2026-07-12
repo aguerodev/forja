@@ -136,11 +136,12 @@ no se cambia en caliente.
 
 ### Healthcheck: liveness y readiness gobiernan el rollback
 
-La app expone `/api/health` (un Route Handler) y de ese check depende el rollback
+La app expone el endpoint de health del contrato (`runtime.healthcheckPath` de
+`.forja.json`, default `/api/health`) y de ese check depende el rollback
 automático del deploy (ver [Pipeline de deploy y CI/CD](./08_how-to-pipeline-cicd.md)). El
 endpoint distingue dos preguntas:
 
-- **Liveness** — ¿el proceso responde? El server de Next está en pie. Es barato y no toca
+- **Liveness** — ¿el proceso responde? El server de la app está en pie. Es barato y no toca
   dependencias; es la señal que mira el Swarm para reiniciar una task colgada.
 - **Readiness** — ¿el proceso puede servir tráfico real? Además de estar en pie, ejecuta
   un `SELECT 1` al pool de `db` con timeout corto (≈1s). Distingue "arrancó" de "está
@@ -153,12 +154,13 @@ El bloque `healthcheck` del servicio `app` en el compose es el que gobierna el r
 
 ```yaml
 healthcheck:
-  # readiness: 200 solo si el SELECT 1 al pool responde dentro del timeout
-  test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  # readiness: 200 solo si el SELECT 1 al pool responde dentro del timeout;
+  # el puerto y el path salen del contrato (runtime.port / healthcheckPath)
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:<port><path> || curl -fsS http://127.0.0.1:<port><path>"]
   interval: 10s
   timeout: 3s
   retries: 3
-  start_period: 45s   # cubre el cold start del server standalone de Next
+  start_period: 45s   # cubre el cold start del server de la app
 ```
 
 **`start-first`** es el orden de actualización: el Swarm arranca la réplica nueva y no baja

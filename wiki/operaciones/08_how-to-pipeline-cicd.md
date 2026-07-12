@@ -70,7 +70,7 @@ La interfaz del operador queda por entorno: **`/forja:deploy preview|production`
 
 El release empieza en Gitflow, no en el deploy — tres pasos previos (el modelo de ramas vive en [Trabajar con agentes §Gitflow](../proceso/01_explicacion-trabajo-con-ia.md)):
 
-- **a.** Cortar `release/<versión>` desde `develop` y hacer ahí el **bump de `package.json`**.
+- **a.** Cortar `release/<versión>` desde `develop` y hacer ahí el **bump de la versión del proyecto** (el dato que lee `commands.version` del contrato).
 - **b.** PR `release/<versión>` → `main` con los gates verdes; merge.
 - **c.** `git checkout main && git pull` en la máquina del operador — recién ahí corre `/forja:deploy`.
 
@@ -85,7 +85,7 @@ El release empieza en Gitflow, no en el deploy — tres pasos previos (el modelo
 7. **Verificación**: health node-side (autoritativo, fatal) + sonda del edge público (warn-only, porque fusiona los dominios de fallo de la app, el túnel y Cloudflare).
 8. **Tag de rollback**: solo una versión que llegó **sana** entra al historial — `deploy.sh` taggea la imagen como `<env>-<utc-ts>` (y `v<version>` en prod), reteniendo las últimas 5 (ver rollback multi-versión abajo).
 9. **Off-site**: el dump del paso 4 se sube al Storage Box de Hetzner **vía el nodo** (el puerto 23 suele estar bloqueado en la red del operador) — fuera del proyecto cloud del server, cumpliendo la regla de blast radius de [Backups](./09_how-to-backups.md).
-10. **Registro**: se corta el tag git `vX.Y.Z` (== versión de `package.json`) como **marca de qué quedó en prod**. El tag es registro, **no** trigger. El preflight exige que el tag de la versión esté **libre**, lo que fuerza el bump de versión antes de cada release. **El tag anotado ES el changelog**: `tag-release.sh` genera su cuerpo con los commits desde el tag anterior (`git log <prev>..HEAD`), así "qué cambió de vX a vY" se responde con `git tag -n99 vX.Y.Z` o `git show vX.Y.Z` — sin `CHANGELOG.md` a mano que se desactualice.
+10. **Registro**: se corta el tag git `vX.Y.Z` (== la versión del proyecto que lee `commands.version`) como **marca de qué quedó en prod**. El tag es registro, **no** trigger. El preflight exige que el tag de la versión esté **libre**, lo que fuerza el bump de versión antes de cada release. **El tag anotado ES el changelog**: `tag-release.sh` genera su cuerpo con los commits desde el tag anterior (`git log <prev>..HEAD`), así "qué cambió de vX a vY" se responde con `git tag -n99 vX.Y.Z` o `git show vX.Y.Z` — sin `CHANGELOG.md` a mano que se desactualice.
 11. **Back-merge**: PR `main` → `develop` para que `develop` cargue el bump y los fixes del release. Sin esto, el próximo release nace mal numerado (ver [§Gitflow](../proceso/01_explicacion-trabajo-con-ia.md)).
 
 ### Rollback en dos planos — nunca mezclarlos
@@ -113,7 +113,7 @@ La regla nació de un incidente con el mecanismo anterior (`docker service creat
 
 - **`check` cancela runs obsoletos** (`cancel-in-progress: true` por rama): un commit nuevo invalida el gate viejo.
 - **No hay job de deploy que serializar**: el ship es manual y humano; dos operadores no despliegan a la vez porque el equipo es chico y el preflight exige `main` al día — si esto deja de alcanzar, ver el dial abajo.
-- **Timeouts por job** y **actions pineadas** a tags inmutables o SHAs (misma higiene de supply chain que `pnpm audit`).
+- **Timeouts por job** y **actions pineadas** a tags inmutables o SHAs (misma higiene de supply chain que la auditoría de dependencias del `check`).
 - **El CI no crea Docker secrets** ni tiene credenciales del nodo: sin clave SSH de deploy en GitHub, la superficie de secretos del repo se reduce a cero secretos de producción.
 
 ### DIAL: volver el deploy al CI
@@ -142,7 +142,7 @@ Los comandos son **`/forja:deploy`** y **`/forja:rollback`**, del plugin forja, 
 | `deploy.sh <env>` | 1 | build → secrets → backup validado → migración gateada → rolling → health → tags de rollback |
 | `offsite-backup.sh` | 2 | dump al Storage Box **vía el nodo** (WARN sin abortar si falta `backup.env`) |
 | `verify.sh` | 2 | SHA desplegado == HEAD (retry de edge + fallback node-side autoritativo) + smoke 200/404 |
-| `tag-release.sh` | 2 | tag git anotado == versión de `package.json`, idempotente, solo desde `main` |
+| `tag-release.sh` | 2 | tag git anotado == versión del proyecto (`commands.version`), idempotente, solo desde `main` |
 | `versions.sh` | rollback | lista candidatos con descripción por commit, marca el corriendo |
 | `rollback-to.sh` | rollback | re-apunta el servicio a cualquier tag (o `latest`) y espera health |
 

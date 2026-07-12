@@ -24,7 +24,7 @@ related: [ops.exponer-tunnel, ops.desplegar-swarm]
 Inicializar un proyecto nuevo de principio a fin: desde instalar el plugin forja —que trae la base de verdad— hasta dejar la app publicada en ambos entornos con su dominio. Flujo lineal —cada paso produce un artefacto que alimenta al siguiente— y ningún eslabón puede omitirse sin afectar lo que viene.
 
 ```
-plugin forja  →  software_requirements/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  src/  →  dev / prod
+plugin forja  →  software_requirements/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  código  →  dev / prod
       0                    1                      2                  3                              3          4
 ```
 
@@ -108,7 +108,7 @@ El concepto de SDD, la descripción de Gentle AI y la estructura de `openspec/` 
 
 El código generado sigue la estructura de módulos del proyecto: vertical slices por contexto de negocio, un core transversal y bindings mínimos al framework — la forma concreta del árbol es doctrina del stack de cada proyecto.
 
-El handoff `software_requirements/ → openspec/ → src/` queda trazable: cada cambio de `openspec/` declara qué requisitos de `software_requirements/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice en `src/features/<feature>/` queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
+El handoff `software_requirements/ → openspec/ → código` queda trazable: cada cambio de `openspec/` declara qué requisitos de `software_requirements/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice resultante en el árbol del código queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
 
 Cada cambio se cierra contra el gate único: el comando `check` del contrato (`commands.check` de `.forja.json`) corre todos los controles que bloquean el merge —tipos, lint, formato, pureza de dependencias y tests, según el stack del proyecto— y local equivale a CI. El mutation testing no es gate de PR: corre como métrica informativa en un job nightly.
 

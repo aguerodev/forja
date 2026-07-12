@@ -22,7 +22,7 @@ Test-Driven Development (desarrollo guiado por tests): el test se escribe antes 
 
 El ciclo es rojo-verde-refactor. Primero se escribe un test que falla (rojo) porque el código que describe aún no existe; ese test rojo define qué es "hecho", al obligar a decidir qué se espera antes de escribir el código. Luego se implementa lo mínimo para que pase (verde). Por último se refactoriza con la red de seguridad del test en verde. El test no es verificación posterior: es la especificación que precede al código.
 
-Un ciclo mínimo (el runner concreto lo define el stack de cada proyecto):
+Un ciclo mínimo — **ejemplo ilustrativo en JavaScript**, no una prescripción de stack (el lenguaje y el runner concretos los define el stack de cada proyecto):
 
 ```js
 // rojo: el test define el comportamiento esperado antes de que exista la funcion
