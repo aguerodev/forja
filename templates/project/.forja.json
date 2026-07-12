@@ -5,5 +5,14 @@
   "dockerContext": "{{APP}}-prod",
   "github": { "org": "{{GH_ORG}}", "repo": "{{GH_REPO}}" },
   "db": { "user": "{{DB_USER}}", "name": "{{DB_NAME}}", "pgMajor": "{{PG_MAJOR}}" },
-  "nodeVersion": "{{NODE_VERSION}}"
+  "commands": {
+    "install": "{{CMD_INSTALL}}",
+    "check": "{{CMD_CHECK}}",
+    "test": "{{CMD_TEST}}",
+    "version": "{{CMD_VERSION}}"
+  },
+  "runtime": {
+    "port": {{APP_PORT}},
+    "healthcheckPath": "{{HEALTH_PATH}}"
+  }
 }

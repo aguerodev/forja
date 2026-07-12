@@ -1,26 +1,4 @@
 {
-  "typescript": {
-    "command": "typescript-language-server",
-    "args": ["--stdio"],
-    "extensionToLanguage": {
-      ".ts": "typescript",
-      ".tsx": "typescriptreact",
-      ".js": "javascript",
-      ".jsx": "javascriptreact",
-      ".mjs": "javascript",
-      ".cjs": "javascript"
-    }
-  },
-  "css": {
-    "command": "vscode-css-language-server",
-    "args": ["--stdio"],
-    "extensionToLanguage": {
-      ".css": "css"
-    },
-    "settings": {
-      "css": { "lint": { "unknownAtRules": "ignore" } }
-    }
-  },
   "bash": {
     "command": "bash-language-server",
     "args": ["start"],

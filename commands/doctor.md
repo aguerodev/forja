@@ -13,7 +13,7 @@ Corré todo en UN bloque de bash:
 ```bash
 echo "== git =="; git --version || echo "DOCTOR_FAIL git"
 echo "== node =="; node -v || echo "DOCTOR_FAIL node"
-echo "== pnpm =="; pnpm -v || echo "DOCTOR_FAIL pnpm"
+echo "== pnpm (solo si el contrato lo usa) =="; pnpm -v || echo "DOCTOR_WARN pnpm (necesario solo si los commands.* de .forja.json lo usan)"
 echo "== gh =="; gh --version && gh auth status || echo "DOCTOR_WARN gh"
 echo "== docker =="; docker version --format '{{.Server.Version}}' || echo "DOCTOR_WARN docker"
 echo "== gentle-ai =="; command -v gentle-ai || echo "DOCTOR_WARN gentle-ai"
@@ -22,7 +22,7 @@ echo "== engram CLI =="; command -v engram || echo "DOCTOR_WARN engram-cli (sin 
 echo "== hcloud (opcional, solo infra) =="; command -v hcloud || echo "DOCTOR_INFO hcloud ausente"
 echo "== wrapper infra =="; ls "${CLAUDE_PLUGIN_ROOT}/bin/hcloud-agent.sh" 2>/dev/null || echo "DOCTOR_INFO wrapper en el bin/ del plugin forja"
 echo "== LSP servers (opcional, inteligencia de código) =="
-for s in typescript-language-server vscode-css-language-server bash-language-server docker-langserver yaml-language-server; do
+for s in bash-language-server docker-langserver yaml-language-server; do
   command -v "$s" >/dev/null 2>&1 && echo "  $s OK" || echo "DOCTOR_INFO lsp $s ausente"
 done
 echo "== shellcheck/shfmt (opcional, diagnósticos del LSP de bash) =="
@@ -39,7 +39,7 @@ Si el directorio actual es un repo git con intención de ser proyecto forja, ver
 
 ```bash
 echo "== .forja.json =="; node -p 'JSON.parse(require("fs").readFileSync(".forja.json","utf8")).app' || echo "DOCTOR_FAIL .forja.json ausente o inválido"
-echo "== gate check =="; node -p 'JSON.parse(require("fs").readFileSync("package.json","utf8")).scripts.check ? "check OK" : "DOCTOR_FAIL sin script check"'
+echo "== gate check (contrato) =="; node -p 'const c=JSON.parse(require("fs").readFileSync(".forja.json","utf8")); "check: " + ((c.commands && c.commands.check) || "pnpm run check (fallback v1)")' || echo "DOCTOR_FAIL .forja.json ilegible"
 echo "== settings de equipo =="; grep -q forja .claude/settings.json 2>/dev/null && echo "marketplace forja referenciado" || echo "DOCTOR_WARN .claude/settings.json no referencia el marketplace forja"
 echo "== gitflow =="; git show-ref --verify --quiet refs/heads/main && echo "main OK" || echo "DOCTOR_WARN falta rama main"; git show-ref --verify --quiet refs/heads/develop && echo "develop OK" || echo "DOCTOR_WARN falta rama develop"
 echo "== preview per-dev =="; DEVU="$(git config --get forja.devUser 2>/dev/null)"; [ -n "$DEVU" ] && echo "forja.devUser=$DEVU" || echo "DOCTOR_INFO forja.devUser sin setear (o vacio) - tu preview usara el label generico dev- (colisiona si hay 2+ devs)"
@@ -56,7 +56,7 @@ Coherencia: el `project_name` de `.engram/config.json` tiene que coincidir con e
 
 Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y columna **remediación** con el paso concreto:
 
-- git/node/pnpm faltantes → comando de instalación (brew/corepack).
+- git/node faltantes → comando de instalación (node es el runtime del tooling forja). pnpm solo si los comandos del contrato lo usan.
 - gh sin auth → `gh auth login`; dos cuentas → `gh auth switch` a la correcta para la org.
 - docker apagado → abrir Docker Desktop / systemctl start docker.
 - gentle-ai ausente → instalarlo antes de `/sdd-init`.
@@ -68,12 +68,12 @@ Mostrá una tabla única: fila por chequeo, columna estado (PASS/WARN/FAIL) y co
 - engram-cloud `not_configured` (recomendado, no obligatorio) → `engram cloud config --server <url>` + `engram cloud enroll <project>`; verificá con `engram sync --cloud --status --project <project>` (debe dar `enabled: true`). Comparte la memoria de equipo por un server, complementando el git-sync de `.engram/`.
 - engram-cloud otros estados → `not_enrolled`: `engram cloud enroll <project>`. `auth`: exportá un `ENGRAM_CLOUD_TOKEN` válido en `~/.zshenv` (NO `~/.zshrc` — los hooks corren en shell no-interactivo y zsh no carga `~/.zshrc` ahí; un token en `~/.zshrc` nunca llega al hook y produce este `auth`/401). `forbidden`: pedí acceso al proyecto en el server. `unreachable`: verificá que el server esté arriba / tu red. `cli_no_cloud`: actualizá el binario engram (tu versión no tiene el subcomando `cloud`).
 - `.forja.json` ausente → `/forja:init` en un directorio nuevo, o crearlo a mano si el proyecto ya existe.
-- sin script `check` → agregar el gate único a `package.json` (doctrina: gates y tooling).
+- sin comando `check` → declarar `commands.check` en `.forja.json` (contrato: `wiki/rules/contrato-forja.md`; fallback v1 `pnpm run check`).
 - settings sin marketplace → agregar `extraKnownMarketplaces`/`enabledPlugins` de forja a `.claude/settings.json`.
 - falta develop → `git branch develop && git push -u origin develop`.
 - `forja.devUser` sin setear → capturá primero y seteá solo si no está vacío: `L="$(gh api user -q .login 2>/dev/null | tr '[:upper:]' '[:lower:]')"; [ -n "$L" ] && git config --local forja.devUser "$L"` — define el hostname de TU preview (solo minúsculas, dígitos y guiones).
 - requerimientos sin `openspec/` → si el SDD ya arrancó, el artifact store quedó en engram por error: re-corré `sdd-init` eligiendo `openspec` (doctrina del equipo) para que los artefactos viajen en los PRs.
-- LSP ausente (opcional) → `pnpm add -g typescript-language-server typescript vscode-langservers-extracted bash-language-server dockerfile-language-server-nodejs yaml-language-server` (el CSS server lo trae `vscode-langservers-extracted`), y para los diagnósticos de bash `brew install shellcheck shfmt`. forja ya trae la config LSP (`.lsp.json`); solo faltan los binarios en el PATH para que Claude Code tenga inteligencia de código del stack.
+- LSP ausente (opcional) → `npm install -g bash-language-server dockerfile-language-server-nodejs yaml-language-server`, y para los diagnósticos de bash `brew install shellcheck shfmt`. forja ya trae la config LSP (`.lsp.json`, bash/docker/yaml); solo faltan los binarios en el PATH. Los language servers del stack de la app (TypeScript, Go, etc.) los define cada proyecto.
 
 Cerrá con un veredicto de una línea: "listo para trabajar" o "arreglá X antes de seguir".
 

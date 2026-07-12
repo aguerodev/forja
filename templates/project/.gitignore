@@ -1,12 +1,9 @@
-# dependencies / build output
+# dependencies / build output (extend with your stack's build dirs)
 node_modules/
-.next/
-*.tsbuildinfo
 
 # test and analysis artifacts
 coverage/
 reports/
-.stryker-tmp/
 
 # secrets: NEVER in git (doctrine: wiki ops/07)
 .env

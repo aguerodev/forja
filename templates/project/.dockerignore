@@ -1,15 +1,12 @@
 # Keep the build context minimal and deterministic. Two hard rules:
-# - node_modules never enters the context: the builder stage's `COPY . .`
+# - dependency installs never enter the context: the builder stage's `COPY . .`
 #   must not overwrite the clean install from the deps stage.
 # - secrets/ never enters the context: secrets/*.env must not be able to
 #   leak into an image layer under any circumstances.
 .git
 node_modules
-.next
 coverage
 reports
-.stryker-tmp
-*.tsbuildinfo
 .env
 secrets/
 backups/
