@@ -1,15 +1,16 @@
 {
   "name": "forja",
   "displayName": "Forja",
-  "version": "0.8.0",
-  "description": "Doctrina de ingeniería + bootstrap enterprise-grade: wiki, skills, comandos de operador y guardias Gitflow para desarrollar con gentle-ai + engram",
+  "version": "0.9.0",
+  "description": "Doctrina de ingeniería agnóstica del stack: contrato .forja.json, wiki de proceso y operaciones, comandos de operador y guardias Gitflow para desarrollar con gentle-ai + engram — adopta proyectos existentes o arranca nuevos",
   "author": {
     "name": "aguerodev"
   },
   "repository": "https://github.com/aguerodev/forja",
   "license": "UNLICENSED",
   "keywords": [
-    "scaffolding",
+    "language-agnostic",
+    "contract",
     "sdd",
     "gitflow",
     "hetzner",

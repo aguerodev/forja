@@ -6,28 +6,26 @@ and the `forja:doctrina` skill; do not guess conventions.
 
 ## Commands
 
-| Command                 | What it does                                               |
-| ----------------------- | ---------------------------------------------------------- |
-| `pnpm dev`              | Next.js dev server on `localhost:3000`                     |
-| `pnpm run check`        | ALL merge gates, local = CI (lint, types, arch, tests, …)  |
-| `pnpm run fix`          | Auto-format + lint fixes + Tailwind class order            |
-| `pnpm test:unit`        | Unit project (no I/O; also part of `check`)                |
-| `pnpm test:integration` | Integration project (testcontainers; needs Docker)         |
-| `pnpm db:generate`      | Generate SQL migrations from `src/features/**/table.ts`    |
-| `pnpm db:migrate`       | Apply migrations (`DATABASE_URL` or `/run/secrets/db_url`) |
+The project contract lives in `.forja.json` — the plugin commands, hooks and
+release scripts read it. The load-bearing commands:
+
+| Command           | What it does                                              |
+| ----------------- | --------------------------------------------------------- |
+| `{{CMD_INSTALL}}` | Install dependencies                                      |
+| `{{CMD_CHECK}}`   | ALL merge gates, local = CI (lint, types, tests, …)       |
+| `{{CMD_TEST}}`    | Unit tests (no I/O; also part of the check gate)          |
+| `{{CMD_VERSION}}` | Print the project version (release tagging reads it)      |
 
 ## Getting started
 
-1. `nvm use` (Node pinned in `.nvmrc`) and `corepack enable pnpm`.
-2. `pnpm install`.
-3. Copy `.env.example` to `.env` (gitignored) and fill in the dev values.
-4. `pnpm run check` must be green before any PR.
+1. Install the project's runtime toolchain.
+2. Run `{{CMD_INSTALL}}`.
+3. Copy `env.example` to `.env` (gitignored) and fill in the dev values.
+4. `{{CMD_CHECK}}` must be green before any PR.
 
 ## Notes
 
-- Architecture: hexagonal core + vertical slices under `src/features/`;
-  the six dependency-cruiser contracts enforce it (`depcruise src`).
-- Auth is deliberately absent: **Better Auth arrives with the first feature
-  that needs authentication** (dial escalation, not a day-one dependency).
+- Architecture: hexagonal core + vertical slices; the project's dependency
+  linter enforces the boundaries.
 - Deploy and operations run through the plugin commands: `/forja:deploy`,
   `/forja:rollback`, `/forja:status`, `/forja:doctor`.

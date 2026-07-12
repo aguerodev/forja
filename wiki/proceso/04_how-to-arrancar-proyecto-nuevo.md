@@ -14,8 +14,8 @@ provides:
   - "artifact store = openspec (parámetro de configuración)"
   - "modo automático (fases encadenadas sin pausa manual)"
   - "secuencia de arranque de proyecto nuevo (cinco pasos)"
-  - "export de claude.ai/design como artefacto (el comando de descarga produce claude_design/; alimenta los tokens --tk-*)"
-reads-before: [fund.stack, proc.tdd, proc.sdd]
+  - "export de claude.ai/design como artefacto (el comando de descarga produce claude_design/; alimenta el sistema de diseño del proyecto)"
+reads-before: [proc.tdd, proc.sdd]
 related: [ops.exponer-tunnel, ops.desplegar-swarm]
 ---
 
@@ -24,7 +24,7 @@ related: [ops.exponer-tunnel, ops.desplegar-swarm]
 Inicializar un proyecto nuevo de principio a fin: desde instalar el plugin forja —que trae la base de verdad— hasta dejar la app publicada en ambos entornos con su dominio. Flujo lineal —cada paso produce un artefacto que alimenta al siguiente— y ningún eslabón puede omitirse sin afectar lo que viene.
 
 ```
-plugin forja  →  software_requirements/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  src/  →  dev / prod
+plugin forja  →  software_requirements/  →  claude_design/  →  Gentle AI / SDD  →  openspec/  →  código  →  dev / prod
       0                    1                      2                  3                              3          4
 ```
 
@@ -38,28 +38,28 @@ Este documento es el orquestador del flujo: da el objetivo de cada paso, qué pr
 
 **Objetivo:** establecer la base de verdad y el andamiaje ejecutable antes de cualquier otra acción.
 
-En un repositorio o carpeta en blanco, el primer movimiento es instalar el plugin **forja** (marketplace `aguerodev/forja`) y correr **`/forja:init`** en la carpeta del proyecto. El comando monta el preflight de herramientas (gentle-ai, engram, gh), el esqueleto ejecutable, Gitflow y el `CLAUDE.md` instanciado. La doctrina **no se copia al proyecto**: viaja dentro del plugin —el stack de desarrollo, los principios de arquitectura, las normas de operación y el marco metodológico que condiciona todo lo que sigue— y se consulta con la skill `forja:doctrina`. Los comandos del operador (`/forja:deploy`, `/forja:rollback`) y las reglas operativas del agente también viven en el plugin: no hay copias por proyecto que mantener sincronizadas.
+En el repositorio del proyecto —existente o en blanco—, el primer movimiento es instalar el plugin **forja** (marketplace `aguerodev/forja`) y correr **`/forja:init`**. El comando detecta el modo (**adoptar** el proyecto existente, que es el default, o **arrancar** uno nuevo en carpeta vacía), corre el preflight de herramientas (gentle-ai, engram, gh) e instala la **capa agnóstica**: el contrato `.forja.json`, los scripts de release, Gitflow y el `CLAUDE.md` instanciado — sin tocar el código de la app. La doctrina **no se copia al proyecto**: viaja dentro del plugin —los principios, las normas de operación y el marco metodológico que condiciona todo lo que sigue— y se consulta con la skill `forja:doctrina`. Los comandos del operador (`/forja:deploy`, `/forja:rollback`) y las reglas operativas del agente también viven en el plugin: no hay copias por proyecto que mantener sincronizadas.
 
 Los skills del flujo (como `spec-doc-interviewer`, el del paso 1) también viajan dentro del plugin: Claude Code los descubre al instalarlo, sin symlinks ni copias.
 
-El stack de desarrollo está en [Stack de desarrollo](../fundamentos/03_referencia-stack-desarrollo.md).
+El stack de desarrollo es una decisión de cada proyecto: sus comandos y su runtime quedan declarados en el contrato committeado [`.forja.json`](../rules/contrato-forja.md).
 
 ### El punto de entrada del agente
 
-Un agente de IA arranca cada sesión en frío: no carga el repositorio entero ni recuerda conversaciones previas, y no lee la wiki completa al abrir. Por eso la raíz incluye un `AGENTS.md` (alias `CLAUDE.md`) como **ancla de entrada**: el primer y único archivo que un agente lee sin que se lo indiquen. No duplica la wiki; la indexa. Declara los comandos load-bearing (`pnpm dev`, `pnpm run check`, `pnpm db:generate`/`db:migrate`; el generador de features todavía **no existe** — la receta honesta es copiar un slice existente, ver [Gates y tooling](../arquitectura/07_referencia-gates-tooling.md)), los gates innegociables y el **mapa de lectura mínima** hacia la doctrina:
+Un agente de IA arranca cada sesión en frío: no carga el repositorio entero ni recuerda conversaciones previas, y no lee la wiki completa al abrir. Por eso la raíz incluye un `AGENTS.md` (alias `CLAUDE.md`) como **ancla de entrada**: el primer y único archivo que un agente lee sin que se lo indiquen. No duplica la wiki; la indexa. Declara los comandos load-bearing del contrato (`commands.dev`, `commands.check`, `commands.migrate` de `.forja.json`), los gates innegociables y el **mapa de lectura mínima** hacia la doctrina:
 
 | Para saber… | Leé |
 |---|---|
 | Los principios que condicionan todo | [Principios del proyecto](../fundamentos/01_explicacion-principios.md) |
-| Dónde vive cada cosa en el árbol | [Estructura del repositorio](../arquitectura/02_referencia-estructura-repo.md) |
-| Las convenciones de código (modelado, errores, autorización) | [Convenciones de código](../arquitectura/03_referencia-convenciones-codigo.md) |
-| Cómo agregar un contexto de negocio | [Crear una feature](../arquitectura/08_how-to-crear-feature.md) |
+| El vocabulario compartido del equipo | [Glosario de términos](../fundamentos/02_referencia-glosario.md) |
+| Los comandos y el runtime del proyecto | [Contrato `.forja.json`](../rules/contrato-forja.md) |
+| Cómo se construye cada cambio | [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md) |
 
 Estos cuatro documentos son la lectura mínima para producir código correcto; el resto de la wiki se consulta a demanda desde ellos. El ancla resuelve el hueco entre "la wiki es la base de verdad" y "cómo el agente llega a la wiki".
 
 El ancla no se escribe desde cero: `/forja:init` la instancia en la raíz como `CLAUDE.md` desde la plantilla CLAUDE.md del plugin forja, completando el bloque «Contexto del proyecto» (app, repo, dominios, servidor).
 
-**Produce:** el andamiaje del proyecto (preflight, esqueleto, Gitflow) y el `AGENTS.md`/`CLAUDE.md` raíz que indexa la doctrina del plugin.
+**Produce:** la capa agnóstica del proyecto (contrato `.forja.json`, scripts de release, Gitflow) y el `AGENTS.md`/`CLAUDE.md` raíz que indexa la doctrina del plugin.
 
 ---
 
@@ -82,7 +82,7 @@ Corre el skill **`spec-doc-interviewer`**: lanza una entrevista estructurada —
 Ese artefacto cumple dos roles aguas abajo:
 
 1. **Insumo de Gentle AI** (junto con `software_requirements/`) para el SDD del paso siguiente.
-2. **Base del sistema de diseño**: sus decisiones visuales (colores, radios, tipografía) se traducen a las primitivas `--tk-*` del sistema de tokens en dos capas ([Estilos de frontend](../arquitectura/06_explicacion-estilos-frontend.md)); no se copia CSS suelto del export al árbol de componentes.
+2. **Base del sistema de diseño**: sus decisiones visuales (colores, radios, tipografía) se traducen al sistema de diseño del proyecto; no se copia CSS suelto del export al árbol de componentes.
 
 **Produce:** `claude_design/` con la propuesta de interfaz y el sistema de diseño exportado.
 
@@ -94,7 +94,7 @@ Ese artefacto cumple dos roles aguas abajo:
 
 Los insumos de entrada son `software_requirements/` **y** `claude_design/`. Gentle AI arranca con `sdd-init` y luego ejecuta el ciclo SDD completo —proposal → spec → design → tasks → apply → verify → archive— para cada cambio.
 
-El esqueleto del repositorio no se escribe a mano: **Plop** genera el proyecto y cada feature con su forma canónica —el hexágono completo de un slice en una sola carpeta bajo `src/features/`—, así el código nace correcto; `pnpm install` deja el entorno reproducible desde `pnpm-lock.yaml`.
+El código de la app lo trae el proyecto —su stack y su esqueleto canónico son decisión propia—; `/forja:init` instala solo la capa de proceso y operación, y el comando `install` del contrato deja el entorno reproducible desde el lockfile del proyecto.
 
 Configuración del flujo en este proyecto:
 
@@ -106,11 +106,11 @@ Configuración del flujo en este proyecto:
 
 El concepto de SDD, la descripción de Gentle AI y la estructura de `openspec/` con la cadena completa de carpetas están en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
 
-El código generado en `src/` sigue la estructura de módulos del proyecto: vertical slices en `src/features/`, core transversal en `src/core/` y bindings mínimos al framework en `src/app/`. La forma completa del árbol está en [Estructura del repositorio](../arquitectura/02_referencia-estructura-repo.md).
+El código generado sigue la estructura de módulos del proyecto: vertical slices por contexto de negocio, un core transversal y bindings mínimos al framework — la forma concreta del árbol es doctrina del stack de cada proyecto.
 
-El handoff `software_requirements/ → openspec/ → src/` queda trazable: cada cambio de `openspec/` declara qué requisitos de `software_requirements/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice en `src/features/<feature>/` queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
+El handoff `software_requirements/ → openspec/ → código` queda trazable: cada cambio de `openspec/` declara qué requisitos de `software_requirements/` (`RF-`/`RNF-`, `RN-`) realiza, y el slice resultante en el árbol del código queda ligado a ese cambio —de un archivo de código se sube hasta el requisito que lo motivó, y a la inversa—. Detalle en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md).
 
-Cada cambio se cierra contra el gate único: `pnpm run check` corre todos los controles que bloquean el merge —tipos con `tsc --noEmit`, lint y formato con Biome, pureza con dependency-cruiser y tests con Vitest— y local equivale a CI. El mutation testing con Stryker no es gate de PR: corre como métrica informativa en un job nightly.
+Cada cambio se cierra contra el gate único: el comando `check` del contrato (`commands.check` de `.forja.json`) corre todos los controles que bloquean el merge —tipos, lint, formato, pureza de dependencias y tests, según el stack del proyecto— y local equivale a CI. El mutation testing no es gate de PR: corre como métrica informativa en un job nightly.
 
 **Produce:** `openspec/` (especificaciones y estado de cada cambio) y `src/` (código).
 

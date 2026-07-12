@@ -19,12 +19,12 @@ provides:
   - "comandos del operador en el plugin forja (deploy y rollback; scripts deterministas en el proyecto)"
   - "interfaz de operación por entorno (/forja:deploy preview|production y /forja:rollback preview|production; preview = swarm local)"
   - "rollback multi-versión (tags post-health, descripción por commit, regreso con latest)"
-  - "jobs de verificación de ci.yml como gates de PR (check, integration, contract; mutation nightly)"
+  - "gates de PR del CI del proyecto (mínimo el check del contrato; los demás jobs los define cada proyecto)"
   - "concurrency (cancel-in-progress true para check; los deploys no se serializan en CI porque el ship es manual y humano)"
   - "deploy vía CI/GitHub Actions como entrada del dial (disparador: más de un operador desplegando a la vez o auditoría de release exigida)"
   - "lección del pipeline por tag (provenance gate + GHCR durable: tres tandas de fixes para un flujo que una persona ejecuta en minutos)"
 reads-before: [ops.secretos, ops.desplegar-swarm]
-related: [arq.gates-tooling, ops.backups]
+related: [ops.backups]
 ---
 
 # Release por comando y CI de gates
@@ -42,7 +42,7 @@ Este doc fija la **norma** portable del release y el **camino verificado** con l
 
 ### Gate en el PR, ship por comando
 
-Los gates de PR no cambian y siguen siendo innegociables: `check` (el `pnpm run check` idéntico a local, que incluye el linter expand/contract de migraciones), `integration` (testcontainers contra la misma major de Postgres que prod) y `contract` (smoke de Schemathesis + el **único `next build` pre-merge** del sistema) bloquean el merge; `mutation` corre nightly como métrica ([Gates y tooling](../arquitectura/07_referencia-gates-tooling.md)). Lo que cambia es el ship: **ningún push, merge ni tag dispara un deploy**. Desplegar es un acto deliberado del operador.
+Los gates de PR no cambian y siguen siendo innegociables: `check` (el comando `check` del contrato, idéntico a local, que incluye el linter expand/contract de migraciones), `integration` (testcontainers contra la misma major de Postgres que prod) y `contract` (smoke del contrato de API + el **único build pre-merge** del sistema) bloquean el merge; `mutation` corre nightly como métrica. Lo que cambia es el ship: **ningún push, merge ni tag dispara un deploy**. Desplegar es un acto deliberado del operador.
 
 La razón de fondo es de proporcionalidad ([robusto no es máximo](../fundamentos/01_explicacion-principios.md#robusto-no-es-máximo)): para un equipo chico donde quien mergea es quien despliega, un pipeline de entrega remoto duplica en YAML —con secretos de deploy en GitHub, auth durable al registry y gates de procedencia— lo que un comando local hace con las credenciales que el operador ya tiene. La evidencia está en el [camino verificado](#lección-verificada-el-pipeline-por-tag).
 
@@ -52,7 +52,7 @@ En el plan free de GitHub no hay branch protection en repos privados: nada impid
 
 1. Rama actual `main`, working tree limpio.
 2. `HEAD` == `origin/main` (ni adelantado ni atrasado).
-3. `pnpm run check` verde en la máquina del operador.
+3. El comando `check` del contrato (default `pnpm run check`) verde en la máquina del operador.
 4. Secrets de prod presentes (archivo local o ya bootstrapeados en el swarm) — mitad **blanda** del control: la aserción dura es el chequeo de `REQUIRED_SECRETS` que `deploy.sh` hace contra el swarm antes de tocar la base.
 5. Confirmación explícita del operador (escribir `prod`).
 
@@ -70,7 +70,7 @@ La interfaz del operador queda por entorno: **`/forja:deploy preview|production`
 
 El release empieza en Gitflow, no en el deploy — tres pasos previos (el modelo de ramas vive en [Trabajar con agentes §Gitflow](../proceso/01_explicacion-trabajo-con-ia.md)):
 
-- **a.** Cortar `release/<versión>` desde `develop` y hacer ahí el **bump de `package.json`**.
+- **a.** Cortar `release/<versión>` desde `develop` y hacer ahí el **bump de la versión del proyecto** (el dato que lee `commands.version` del contrato).
 - **b.** PR `release/<versión>` → `main` con los gates verdes; merge.
 - **c.** `git checkout main && git pull` en la máquina del operador — recién ahí corre `/forja:deploy`.
 
@@ -85,7 +85,7 @@ El release empieza en Gitflow, no en el deploy — tres pasos previos (el modelo
 7. **Verificación**: health node-side (autoritativo, fatal) + sonda del edge público (warn-only, porque fusiona los dominios de fallo de la app, el túnel y Cloudflare).
 8. **Tag de rollback**: solo una versión que llegó **sana** entra al historial — `deploy.sh` taggea la imagen como `<env>-<utc-ts>` (y `v<version>` en prod), reteniendo las últimas 5 (ver rollback multi-versión abajo).
 9. **Off-site**: el dump del paso 4 se sube al Storage Box de Hetzner **vía el nodo** (el puerto 23 suele estar bloqueado en la red del operador) — fuera del proyecto cloud del server, cumpliendo la regla de blast radius de [Backups](./09_how-to-backups.md).
-10. **Registro**: se corta el tag git `vX.Y.Z` (== versión de `package.json`) como **marca de qué quedó en prod**. El tag es registro, **no** trigger. El preflight exige que el tag de la versión esté **libre**, lo que fuerza el bump de versión antes de cada release. **El tag anotado ES el changelog**: `tag-release.sh` genera su cuerpo con los commits desde el tag anterior (`git log <prev>..HEAD`), así "qué cambió de vX a vY" se responde con `git tag -n99 vX.Y.Z` o `git show vX.Y.Z` — sin `CHANGELOG.md` a mano que se desactualice.
+10. **Registro**: se corta el tag git `vX.Y.Z` (== la versión del proyecto que lee `commands.version`) como **marca de qué quedó en prod**. El tag es registro, **no** trigger. El preflight exige que el tag de la versión esté **libre**, lo que fuerza el bump de versión antes de cada release. **El tag anotado ES el changelog**: `tag-release.sh` genera su cuerpo con los commits desde el tag anterior (`git log <prev>..HEAD`), así "qué cambió de vX a vY" se responde con `git tag -n99 vX.Y.Z` o `git show vX.Y.Z` — sin `CHANGELOG.md` a mano que se desactualice.
 11. **Back-merge**: PR `main` → `develop` para que `develop` cargue el bump y los fixes del release. Sin esto, el próximo release nace mal numerado (ver [§Gitflow](../proceso/01_explicacion-trabajo-con-ia.md)).
 
 ### Rollback en dos planos — nunca mezclarlos
@@ -101,7 +101,7 @@ El rollback de código es seguro **porque** la disciplina expand/contract (abajo
 
 ### Disciplina de migración: expand/contract
 
-La migración corre **una sola vez**, antes de rolar la app, y el deploy se aborta si falla. Para cambios **destructivos** se usa **expand/contract**: se agrega lo nuevo en un deploy, se migra el código, y se borra lo viejo en un deploy **posterior** — durante el rolling conviven las dos versiones del código y ambas deben funcionar contra el mismo esquema. El gate ejecutable que impide saltearse la disciplina (el linter de SQL destructivo/non-expand, integrado en `pnpm run check`) vive en [Gates y tooling](../arquitectura/07_referencia-gates-tooling.md); el snapshot prod-like es una escalación del dial documentada ahí.
+La migración corre **una sola vez**, antes de rolar la app, y el deploy se aborta si falla. Para cambios **destructivos** se usa **expand/contract**: se agrega lo nuevo en un deploy, se migra el código, y se borra lo viejo en un deploy **posterior** — durante el rolling conviven las dos versiones del código y ambas deben funcionar contra el mismo esquema. El gate ejecutable que impide saltearse la disciplina es el linter de SQL destructivo/non-expand, integrado en el comando `check` del contrato; el snapshot prod-like es una escalación del dial.
 
 ### Por qué el resultado de un job one-shot se lee del estado de la task
 
@@ -113,7 +113,7 @@ La regla nació de un incidente con el mecanismo anterior (`docker service creat
 
 - **`check` cancela runs obsoletos** (`cancel-in-progress: true` por rama): un commit nuevo invalida el gate viejo.
 - **No hay job de deploy que serializar**: el ship es manual y humano; dos operadores no despliegan a la vez porque el equipo es chico y el preflight exige `main` al día — si esto deja de alcanzar, ver el dial abajo.
-- **Timeouts por job** y **actions pineadas** a tags inmutables o SHAs (misma higiene de supply chain que `pnpm audit`).
+- **Timeouts por job** y **actions pineadas** a tags inmutables o SHAs (misma higiene de supply chain que la auditoría de dependencias del `check`).
 - **El CI no crea Docker secrets** ni tiene credenciales del nodo: sin clave SSH de deploy en GitHub, la superficie de secretos del repo se reduce a cero secretos de producción.
 
 ### DIAL: volver el deploy al CI
@@ -125,7 +125,7 @@ Deploy automatizado vía GitHub Actions (o cualquier runner remoto) queda como *
 | Más de un operador despliega y empiezan a pisarse, o hace falta desplegar sin la máquina de un operador | Job `deploy` en CI con environment gateado por aprobación humana, imagen por registry (GHCR por digest), `concurrency` que serializa sin cancelar migraciones |
 | Auditoría/compliance exige trazabilidad de release independiente del operador | Deploy por tag con provenance gate (el commit del tag debe estar en `main`) |
 
-Si se sube este escalón, el trabajo ya está hecho una vez: el riel del pipeline por tag existió y funcionó (ver abajo); recuperarlo es exhumar `ci.yml` del historial de git, no diseñarlo de cero.
+Si se sube este escalón, el trabajo ya está hecho una vez: el riel del pipeline por tag existió y funcionó (ver abajo). Cada proyecto define su propio CI honrando "local = CI" con el comando `check` del contrato; el `ci.yml` de referencia del stack TS histórico se recupera del tag `ts-next-doctrine-final` del repo del plugin, no se diseña de cero.
 
 ---
 
@@ -138,11 +138,11 @@ Los comandos son **`/forja:deploy`** y **`/forja:rollback`**, del plugin forja, 
 | Script | Fase | Qué decide |
 |---|---|---|
 | `lib.sh` | — | contexto compartido; `env_ctx production\|preview` resuelve stack/host/docker/túnel |
-| `preflight.sh` | 0 | gates de procedencia (rama, tree, origin, tag libre, `pnpm run check`) + resumen del release |
+| `preflight.sh` | 0 | gates de procedencia (rama, tree, origin, tag libre, `check` del contrato) + resumen del release |
 | `deploy.sh <env>` | 1 | build → secrets → backup validado → migración gateada → rolling → health → tags de rollback |
 | `offsite-backup.sh` | 2 | dump al Storage Box **vía el nodo** (WARN sin abortar si falta `backup.env`) |
 | `verify.sh` | 2 | SHA desplegado == HEAD (retry de edge + fallback node-side autoritativo) + smoke 200/404 |
-| `tag-release.sh` | 2 | tag git anotado == versión de `package.json`, idempotente, solo desde `main` |
+| `tag-release.sh` | 2 | tag git anotado == versión del proyecto (`commands.version`), idempotente, solo desde `main` |
 | `versions.sh` | rollback | lista candidatos con descripción por commit, marca el corriendo |
 | `rollback-to.sh` | rollback | re-apunta el servicio a cualquier tag (o `latest`) y espera health |
 

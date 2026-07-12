@@ -8,14 +8,16 @@
 #   1. current branch is main
 #   2. working tree is clean
 #   3. HEAD == origin/main — neither ahead nor behind (fetches origin main)
-#   4. tag v<package.json version> is FREE (forces the version bump)
+#   4. tag v<project version> is FREE (forces the version bump; the version
+#      comes from the contract command, default package.json)
 #   5. prod secrets soft-present: secrets/prod.env locally OR all required
 #      secrets already bootstrapped in the prod swarm. SOFT half of the
 #      control — the hard assert is deploy.sh's REQUIRED_SECRETS check
 #      against the swarm before touching the database.
-#   6. pnpm run check green. Skipped (not counted) when an earlier gate
-#      already failed: the run takes minutes and the release is already
-#      blocked — fix the cheap gate first.
+#   6. contract check command green (commands.check from .forja.json; default
+#      `pnpm run check`). Skipped (not counted) when an earlier gate already
+#      failed: the run takes minutes and the release is already blocked — fix
+#      the cheap gate first.
 #
 # All green -> prints the release summary (version, HEAD, target host).
 # The human confirmation ("prod") is NEVER scripted: /forja:deploy owns it.
@@ -23,7 +25,12 @@ set -euo pipefail
 
 # shellcheck source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
-require_cmd git pnpm
+require_cmd git
+# pnpm is only a hard requirement when the contract commands actually use it
+# (the v1 default). A project on another toolchain brings its own commands.
+case "${FORJA_CHECK_CMD} ${FORJA_VERSION_CMD}" in
+  *pnpm*) require_cmd pnpm ;;
+esac
 cd "${FORJA_ROOT}"
 
 env_ctx production
@@ -67,10 +74,10 @@ else
 fi
 
 # ── Gate 4: release tag is free ──────────────────────────────────────────────
-version="$(pkg_version)"
+version="$(project_version)"
 tag="v${version}"
 if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null 2>&1; then
-  gate_fail "tag ${tag} already exists — bump the version in package.json (release/* branch) before releasing"
+  gate_fail "tag ${tag} already exists — bump the project version (the datum read by commands.version; default package.json) on a release/* branch before releasing"
 else
   pass "tag ${tag} is free"
 fi
@@ -94,14 +101,14 @@ else
   fi
 fi
 
-# ── Gate 6: pnpm run check ───────────────────────────────────────────────────
+# ── Gate 6: contract check command (default: pnpm run check) ────────────────
 if [ "${FAILURES}" -gt 0 ]; then
-  printf '[SKIP] pnpm run check — %d gate(s) already failed, fix those first\n' "${FAILURES}"
+  printf '[SKIP] %s — %d gate(s) already failed, fix those first\n' "${FORJA_CHECK_CMD}" "${FAILURES}"
 else
-  if pnpm run check; then
-    pass "pnpm run check green"
+  if sh -c "${FORJA_CHECK_CMD}"; then
+    pass "${FORJA_CHECK_CMD} green"
   else
-    gate_fail "pnpm run check failed — nothing ships red (fix the code, never the gate)"
+    gate_fail "${FORJA_CHECK_CMD} failed — nothing ships red (fix the code, never the gate)"
   fi
 fi
 

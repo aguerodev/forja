@@ -1,17 +1,16 @@
 ---
 name: doctrina
-description: 'Consultar la doctrina de ingeniería forja - arquitectura hexagonal y vertical slices, convenciones de código, testing y gates, Gitflow, deploy a Swarm, secretos, backups, aprovisionar y operar el servidor Hetzner, rollback, arrancar un proyecto nuevo. Usala siempre que vayas a crear una feature, tocar auth, desplegar, operar el servidor o citar una convención del equipo. Keywords: architecture doctrine, engineering conventions, hexagonal, deploy, Hetzner, Gitflow.'
+description: 'Consultar la doctrina de ingeniería forja - proceso (SDD, TDD, Gitflow), arquitectura hexagonal y vertical slices como principios, gates, deploy a Swarm, secretos, backups, aprovisionar y operar el servidor Hetzner, rollback, arrancar un proyecto nuevo. Usala siempre que vayas a crear una feature, desplegar, operar el servidor o citar una convención del equipo. Keywords: process doctrine, engineering conventions, hexagonal, deploy, Hetzner, Gitflow.'
 ---
 
 # Doctrina forja
 
-La doctrina completa vive en `${CLAUDE_PLUGIN_ROOT}/wiki/` — 28 documentos en 4 tiers (Fundamentos, Proceso, Arquitectura, Operaciones). **NO leas la wiki entera**: está diseñada para cargarse por recetas.
+La doctrina completa vive en `${CLAUDE_PLUGIN_ROOT}/wiki/` — 19 documentos en 3 tiers (Fundamentos, Proceso, Operaciones). **NO leas la wiki entera**: está diseñada para cargarse por recetas.
 
 ## Protocolo de consulta
 
 1. Leé `${CLAUDE_PLUGIN_ROOT}/wiki/MANIFIESTO.md`. Es el índice derivado de toda la doctrina: tiers, DAG de lectura (`reads-before`), índice tema → doc dueño, y **recetas por tarea**:
-   - `nueva-feature` — crear un slice nuevo
-   - `tocar-auth` — cualquier cambio en autenticación o sesión
+   - `nueva-feature` — construir un cambio nuevo (el proceso: SDD + TDD)
    - `desplegar` — release a preview o production
    - `rollback` — volver a una versión sana
    - `arrancar-proyecto` — bootstrap de un proyecto desde cero
@@ -21,7 +20,7 @@ La doctrina completa vive en `${CLAUDE_PLUGIN_ROOT}/wiki/` — 28 documentos en 
 
 3. Si NO matchea ninguna receta → usá el **índice tema → doc dueño** del MANIFIESTO para saltar al documento canónico del término (por ejemplo: "expand/contract" → doc dueño de migraciones). No adivines el archivo.
 
-4. **Tier 0 (`wiki/fundamentos/`) se lee SIEMPRE** que arranques trabajo sustancial: ahí viven el dial (complejidad diferida), las tres rectoras y el stack. Es el piso conceptual del que cuelga todo lo demás.
+4. **Tier 0 (`wiki/fundamentos/`) se lee SIEMPRE** que arranques trabajo sustancial: ahí viven el dial (complejidad diferida), las tres rectoras y el glosario. Es el piso conceptual del que cuelga todo lo demás.
 
 ## Reglas duras
 
@@ -31,7 +30,6 @@ La doctrina completa vive en `${CLAUDE_PLUGIN_ROOT}/wiki/` — 28 documentos en 
 
 ## Cuándo consultarla
 
-- Antes de crear una feature (receta `nueva-feature` — el hexágono del slice tiene forma canónica).
-- Antes de tocar auth o sesión (receta `tocar-auth` — es superficie de seguridad).
+- Antes de crear una feature (receta `nueva-feature` — SDD y TDD fijan el proceso del cambio).
 - Antes de desplegar u operar el servidor (recetas `desplegar` / `operar-servidor` — los controles son exit codes, no prosa).
 - Cada vez que cites una convención del equipo: citá el doc dueño, no tu memoria.

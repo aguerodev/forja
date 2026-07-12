@@ -28,6 +28,13 @@ console.log("PROD_HOST=" + c.publicName + "." + c.domain);
 console.log("DOCKER_CONTEXT=" + c.dockerContext);
 console.log("DB_USER=" + c.db.user);
 console.log("DB_NAME=" + c.db.name);
+// Contrato v2 con fallbacks v1 (wiki/rules/contrato-forja.md).
+// \x27 = comilla simple: el bloque exterior corre entre comillas simples.
+const cmds = c.commands || {};
+const rt = c.runtime || {};
+console.log("FORJA_CHECK_CMD=" + (cmds.check || "pnpm run check"));
+console.log("FORJA_HEALTH_PATH=" + (rt.healthcheckPath || "/api/health"));
+console.log("FORJA_VERSION_CMD=" + (cmds.version || "node -p \"require(\x27./package.json\x27).version\""));
 '
 ```
 
@@ -55,7 +62,7 @@ STACK=$STACK_TEST PUBLIC_HOST=$PREVIEW_HOST bash scripts/release/verify.sh
 bash scripts/release/preflight.sh
 ```
 
-- Exit ≠ 0 → **ABORTAR** mostrando el `[FAIL]` (rama ≠ main, tree sucio, desfasado de origin, tag ya existente, `pnpm run check` rojo).
+- Exit ≠ 0 → **ABORTAR** mostrando el `[FAIL]` (rama ≠ main, tree sucio, desfasado de origin, tag ya existente, check del contrato rojo — `$FORJA_CHECK_CMD`, default `pnpm run check`).
 - Exit 0 → mostrar el **resumen del release** y pedir al usuario que escriba **`prod`** literal. Sin esa palabra NO hay deploy.
 
 ### Fase 1 — Deploy

@@ -79,10 +79,10 @@ Una pieza por función. Cada fila es la elección única para su área.
   servidor solo necesita egress al borde de Cloudflare (puerto `7844`) y SSH entrante para
   operación.
 
-- **La imagen es la unidad inmutable.** Se construye una vez —imagen Node multi-stage con
-  el `output: 'standalone'` de Next.js y usuario sin privilegios—, se tagea por **SHA del
+- **La imagen es la unidad inmutable.** Se construye una vez —imagen multi-stage con
+  usuario sin privilegios—, se tagea por **SHA del
   commit** (nunca `latest`) y se promueve tal cual; no se reconstruye por entorno. Config y
-  secrets se inyectan en runtime: el módulo `config` (Zod) lee `/run/secrets`, montados por
+  secrets se inyectan en runtime: el módulo de config de la app lee `/run/secrets`, montados por
   Swarm; nada se hornea en la imagen. Detalle en
   [Entornos e imagen Docker](./02_referencia-entornos-e-imagen.md).
 
@@ -102,7 +102,7 @@ Cloudflare edge ──── DNS: ${APP}.<dominio>  CNAME  <tunnel-id>.cfargotun
 │                                                                            │
 │   red overlay:  ${STACK}_backend                                           │
 │                                                                            │
-│     cloudflared ──── http://app:8000 ────▶  app  (Next.js, N replicas)     │
+│     cloudflared ──── http://app:8000 ────▶  app  (la app, N replicas)      │
 │                                               │                            │
 │                                               └── postgresql ──▶  db        │
 │                                          (1 replica, en el manager, volumen persistente) │
@@ -124,9 +124,9 @@ el estado declarado contra el real sin orden de arranque manual.
 **El nombre del servicio es el nombre de red.** `cloudflared` y `app` se resuelven entre
 sí por su nombre de servicio en la overlay (DNS interno del swarm). Por eso el ingress del
 túnel apunta a `http://app:8000` y no a `localhost`: son contenedores distintos. El
-servicio `app` corre el servidor standalone de Next.js (`node server.js`), que escucha en
-el puerto `8000` (el `PORT` que fija `stack.yml`); ese mismo proceso sirve la UI server-side, los Route Handlers y las
-Server Actions, porque es un único desplegable full-stack. El modelo de exposición por
+servicio `app` corre el servidor de la aplicación, que escucha en
+el puerto interno del contrato (`runtime.port` de `.forja.json`, el mismo `PORT` que fija
+`stack.yml`); ese único proceso sirve la app completa, porque es un único desplegable. El modelo de exposición por
 túnel se desarrolla en [Exponer la app por Cloudflare Tunnel](./05_how-to-exponer-cloudflare-tunnel.md).
 
 **`db` corre en el manager, con volumen y una sola réplica.** La persistencia no se
@@ -136,11 +136,12 @@ no se cambia en caliente.
 
 ### Healthcheck: liveness y readiness gobiernan el rollback
 
-La app expone `/api/health` (un Route Handler) y de ese check depende el rollback
+La app expone el endpoint de health del contrato (`runtime.healthcheckPath` de
+`.forja.json`, default `/api/health`) y de ese check depende el rollback
 automático del deploy (ver [Pipeline de deploy y CI/CD](./08_how-to-pipeline-cicd.md)). El
 endpoint distingue dos preguntas:
 
-- **Liveness** — ¿el proceso responde? El server de Next está en pie. Es barato y no toca
+- **Liveness** — ¿el proceso responde? El server de la app está en pie. Es barato y no toca
   dependencias; es la señal que mira el Swarm para reiniciar una task colgada.
 - **Readiness** — ¿el proceso puede servir tráfico real? Además de estar en pie, ejecuta
   un `SELECT 1` al pool de `db` con timeout corto (≈1s). Distingue "arrancó" de "está
@@ -153,12 +154,13 @@ El bloque `healthcheck` del servicio `app` en el compose es el que gobierna el r
 
 ```yaml
 healthcheck:
-  # readiness: 200 solo si el SELECT 1 al pool responde dentro del timeout
-  test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  # readiness: 200 solo si el SELECT 1 al pool responde dentro del timeout;
+  # el puerto y el path salen del contrato (runtime.port / healthcheckPath)
+  test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:<port><path> || curl -fsS http://127.0.0.1:<port><path>"]
   interval: 10s
   timeout: 3s
   retries: 3
-  start_period: 45s   # cubre el cold start del server standalone de Next
+  start_period: 45s   # cubre el cold start del server de la app
 ```
 
 **`start-first`** es el orden de actualización: el Swarm arranca la réplica nueva y no baja
