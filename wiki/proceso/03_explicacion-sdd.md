@@ -28,7 +28,7 @@ provides:
   - "artifact-store"
   - "formatos de artefactos (catálogo de requisitos SRS ligero, dbdocs, Mermaid classDiagram)"
 reads-before: [fund.principios, proc.trabajo-ia]
-related: [arq.crear-feature]
+related: []
 ---
 
 # SDD, flujo de especificación y Gentle AI
@@ -114,7 +114,7 @@ Al archivar un cambio, sus **delta specs** se integran en las **specs vigentes**
 1. `software_requirements/` fija los requerimientos del proyecto (estables, evolucionan poco).
 2. `claude_design/` traduce esos requerimientos a una propuesta de interfaz; junto con `software_requirements/`, es el insumo de entrada de Gentle AI.
 3. Cada cambio concreto nace como `openspec/changes/<cambio>/` y atraviesa las fases del SDD.
-4. La implementación cae en `src/features/<feature>/` —el hexágono completo de cada vertical slice, los archivos canónicos— siguiendo la [receta para crear una feature](../arquitectura/08_how-to-crear-feature.md), que fija la lista única de archivos del slice. El enrutado (Route Handlers y páginas) vive en `src/app/` como binding fino; la lógica de dominio, el servicio, los schemas Zod y el adaptador de repositorio pertenecen al slice bajo `src/features/`. El `route.ts` de cada slice registra además sus operaciones en el `OpenAPIRegistry` central: el **contrato OpenAPI se ensambla desde los slices**, no se redacta aparte (detalle en [Ensamblado del contrato OpenAPI](../arquitectura/07_referencia-gates-tooling.md#ensamblado-del-contrato-openapi)).
+4. La implementación cae en la carpeta del slice —el hexágono completo de cada vertical slice, con la forma canónica de archivos que fija la doctrina del stack de cada proyecto—. El enrutado vive como binding fino al framework; la lógica de dominio, el servicio, los schemas y el adaptador de repositorio pertenecen al slice. Cada slice registra además sus operaciones en el registro central del contrato: el **contrato OpenAPI se ensambla desde los slices**, no se redacta aparte.
 5. Al archivar, las specs del cambio se consolidan en `openspec/specs/`, que refleja el estado vigente del sistema.
 
 **Trazabilidad del handoff.** La cadena `software_requirements/ → openspec/ → src/` es rastreable de punta a punta por los identificadores que `software_requirements/` fija (`RF-`/`RNF-`, `RN-`): cada `proposal.md` y cada delta spec bajo `openspec/changes/<cambio>/` declara qué requisitos realiza, y el slice resultante bajo `src/features/<feature>/` queda ligado a ese cambio. De un archivo de `src/` se sube al cambio de `openspec/` que lo originó, y de ahí al requisito de `software_requirements/` que lo motivó —y a la inversa, de un requisito se baja al código que lo cumple—. Ningún eslabón inventa alcance: cada capa solo concreta lo que la anterior fijó.

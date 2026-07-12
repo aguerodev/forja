@@ -4,12 +4,12 @@ titulo: Secretos
 tipo: referencia
 tier: 3
 audience: both
-resumen: Ciclo de vida del Docker secret, el contrato de nombre target = clave del schema Zod, y el procedimiento de rotación.
+resumen: Ciclo de vida del Docker secret, el contrato de nombre target = clave del schema de config, y el procedimiento de rotación.
 provides:
   - "Docker secret (cifrado en el swarm, montado en /run/secrets, nunca env ni horneado en la imagen)"
   - "secrets/<env>.env (fuente local gitignored)"
   - "convención de nombre ${STACK}_<clave en minúscula>"
-  - "contrato de nombre (secret.target = clave del campo en el schema Zod de config)"
+  - "contrato de nombre (secret.target = clave del campo en el schema de config de la app)"
   - "external:true en compose / deploy.sh crea el secret solo si no existe (idempotencia)"
   - "inmutabilidad del secret (docker secret rm + recreate para rotar)"
   - "el host de la DB en la cadena de conexión es el nombre de servicio (no localhost)"
@@ -19,7 +19,7 @@ provides:
   - "compartición de secretos del equipo vía gestor (materialización local, no compartir archivos; global sin carpeta vs proyecto con carpeta = app)"
   - "anti-patrón de anotar secretos en engram (sincroniza a un server compartido y commitea chunks a git: fuga al equipo y al historial)"
 reads-before: [ops.modelo-operacion]
-related: [arq.estructura-repo, arq.convenciones, ops.onboarding-secretos]
+related: [ops.onboarding-secretos]
 ---
 
 # Secretos
@@ -37,7 +37,7 @@ La regla portable: qué es un secret, cómo se nombra y por qué esa convención
 - **Fuente local, gitignored.** Los valores viven solo en `secrets/<env>.env` (en `.gitignore`), respaldados fuera de git (gestor de contraseñas). Si se pierde tu máquina, se pierden los secretos.
 - **Materialización.** `deploy.sh` lee `secrets/<env>.env` y crea un Docker secret por cada línea, con el nombre `${STACK}_<clave_en_minuscula>`, **solo si no existe** (los secrets son inmutables). Esta creación condicional es lo que hace al deploy idempotente.
 - **Montaje.** El `stack.yml` referencia esos secrets como `external: true` y los monta con un `target` (el nombre del archivo en `/run/secrets/`). El secret `${STACK}_<clave>` se monta como `/run/secrets/<clave>`.
-- **Lectura.** El módulo `config` (un schema Zod que lee `/run/secrets`) toma `/run/secrets/<clave>` y lo valida contra el campo `<clave>` del schema.
+- **Lectura.** El módulo `config` de la app (un schema validado que lee `/run/secrets`) toma `/run/secrets/<clave>` y lo valida contra el campo `<clave>` del schema.
 
 ### Compartición entre developers: el gestor del equipo
 
@@ -60,7 +60,7 @@ Cada cosa viaja por su carril. El conocimiento (decisiones, gotchas) va a engram
 
 ### El contrato de nombre
 
-**El nombre del secret (su `target`) = la clave del campo en el schema Zod de config.** El loader recorre los archivos de `/run/secrets/` y arma el objeto con la clave igual al nombre de archivo, sin transformar. No hay tabla de mapeo entre nombres de secret y campos de config: el nombre ES el contrato. Patrón del módulo `config` con Zod y lectura desde `SECRETS_DIR`: [Convenciones de código](../arquitectura/03_referencia-convenciones-codigo.md). Carpeta `secrets/` en el árbol del repositorio: [Estructura del repositorio](../arquitectura/02_referencia-estructura-repo.md).
+**El nombre del secret (su `target`) = la clave del campo en el schema de config de la app.** El loader recorre los archivos de `/run/secrets/` y arma el objeto con la clave igual al nombre de archivo, sin transformar. No hay tabla de mapeo entre nombres de secret y campos de config: el nombre ES el contrato. El patrón concreto del módulo de config es doctrina del stack de cada proyecto.
 
 Distinción clave que reaparece en la rotación:
 
@@ -69,18 +69,7 @@ Distinción clave que reaparece en la rotación:
 
 ### Las migraciones resuelven la conexión con el mismo contrato de dos fuentes
 
-`drizzle.config.ts` resuelve la URL de la base con el mismo contrato de dos fuentes que el módulo `config`: primero la variable de entorno `DATABASE_URL`, después el secret montado en `/run/secrets/db_url`, y `undefined` si no hay ninguna (un `drizzle-kit generate` no necesita conexión viva):
-
-```typescript
-function resolveDbUrl(): string | undefined {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  try {
-    return readFileSync("/run/secrets/db_url", "utf-8").trim();
-  } catch {
-    return undefined;
-  }
-}
-```
+El tooling de migraciones del stack resuelve la URL de la base con el mismo contrato de dos fuentes que el módulo de config: primero la variable de entorno `DATABASE_URL`, después el secret montado en `/run/secrets/db_url` (y ninguna cuando una operación no necesita conexión viva).
 
 Las dos fuentes existen porque hay dos consumidores: el CI y el dev local pasan `DATABASE_URL` como variable de entorno; el one-shot de migración del Swarm lee el secret montado. No hay segunda fuente de verdad para las credenciales: ambas rutas terminan en el mismo valor que consume la app.
 

@@ -17,7 +17,7 @@
     "check": "pnpm run check",
     "test": "pnpm test:unit",
     "dev": "pnpm dev",
-    "migrate": "pnpm drizzle-kit migrate",
+    "migrate": "pnpm run db:migrate",
     "version": "node -p \"require('./package.json').version\""
   },
   "runtime": {
@@ -83,6 +83,11 @@ Todo lector de `.forja.json` (scripts, comandos, hooks) DEBE aplicar exactamente
 
 - Los `commands.*` son strings de shell: se ejecutan con `sh -c` desde la raíz del repo. Ningún lector interpreta su contenido.
 - Un `runtime` parcial se completa campo a campo con los defaults (declarar solo `port` NO borra el `healthcheckPath` default).
+
+### Qué lee la máquina hoy vs qué es documental
+
+- **Leídos por el tooling hoy**: `commands.check` (preflight y comandos), `commands.version` (preflight, tagging, deploy) y `runtime.*` (health node-side y edge). Cambiarlos cambia el comportamiento del pipeline.
+- **Documentales por ahora**: `commands.install`, `commands.test`, `commands.dev` y `commands.migrate` — los leen `/forja:init`, los humanos y el agente como fuente de verdad de los comandos del proyecto, pero ningún script los ejecuta todavía. Declararlos igual: son el contrato al que el tooling se va acoplando.
 
 ## Semántica
 

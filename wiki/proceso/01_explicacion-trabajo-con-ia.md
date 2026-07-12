@@ -21,7 +21,7 @@ provides:
   - "reglas de commit (Conventional Commits tipo(scope): imperativo; un commit = unidad de trabajo revisable; sin atribución de IA; commitlint es dial)"
   - "colisiones acotadas por slice (una feature = una carpeta = un agente; Gitflow pone la cadencia encima)"
 reads-before: [fund.principios]
-related: [arq.hexagonal]
+related: []
 ---
 
 # Por qué la arquitectura está pensada para el flujo de un agente
@@ -30,23 +30,23 @@ Premisa: buena parte del código lo escribe y modifica un agente de IA que no ca
 
 ## Una feature es una unidad que un sub-agente posee de punta a punta
 
-La [vertical slice](../arquitectura/01_explicacion-arquitectura-hexagonal.md#segunda-decisión-organizar-por-feature-no-por-capa) da límites naturales para repartir trabajo entre fases y sub-agentes sin que se pisen. Una feature es una carpeta autocontenida bajo `src/features/<feature>/`: el sub-agente que la posee carga poco —el hexágono completo en un solo directorio— y el radio de daño de un error queda acotado a ese límite. Organizar por capa esparciría una feature por todo el árbol y obligaría a sostener más contexto del necesario.
+La **vertical slice** da límites naturales para repartir trabajo entre fases y sub-agentes sin que se pisen. Una feature es una carpeta autocontenida: el sub-agente que la posee carga poco —el hexágono completo en un solo directorio— y el radio de daño de un error queda acotado a ese límite. Organizar por capa esparciría una feature por todo el árbol y obligaría a sostener más contexto del necesario.
 
 ## Los contratos son el handoff entre fases
 
-El [puerto](../arquitectura/01_explicacion-arquitectura-hexagonal.md#tercera-decisión-dentro-de-cada-feature-un-núcleo-hexagonal) (la interfaz TypeScript que el dominio define en `ports.ts`) y el esquema OpenAPI permiten que la fase de diseño fije la interfaz y la de implementación la cumpla sin releer todo. El OpenAPI 3.1 que los schemas Zod producen vía `zod-to-openapi` es documentación viva del contrato, para humanos y para la IA: el handoff entre fases es un artefacto explícito, no conocimiento tácito.
+El **puerto** (la interfaz que el dominio define para lo que necesita del exterior) y el esquema OpenAPI permiten que la fase de diseño fije la interfaz y la de implementación la cumpla sin releer todo. El contrato OpenAPI que el borde publica es documentación viva, para humanos y para la IA: el handoff entre fases es un artefacto explícito, no conocimiento tácito.
 
 ## La convención es el sustrato de las skills
 
-Cuanto más uniforme y convencional es el código, más aplica una skill genérica en cualquier feature. [Convención sobre configuración](../fundamentos/01_explicacion-principios.md#convención-sobre-configuración) no es solo menos esfuerzo humano: es lo que hace transferibles las skills, porque una skill que asume un único patrón —el slice canónico que `Plop` genera, con sus `domain.ts`, `ports.ts`, `service.ts`, `schemas.ts` y `repository.ts`— sirve en toda feature que respeta ese patrón.
+Cuanto más uniforme y convencional es el código, más aplica una skill genérica en cualquier feature. [Convención sobre configuración](../fundamentos/01_explicacion-principios.md#convención-sobre-configuración) no es solo menos esfuerzo humano: es lo que hace transferibles las skills, porque una skill que asume un único patrón —el slice canónico con su forma fija de archivos— sirve en toda feature que respeta ese patrón.
 
 ## El orquestador delgado refleja la capa `app` fina
 
-Mismo principio en dos niveles: arriba, un orquestador delgado conduce y delega; abajo, la lógica vive en el núcleo de dominio y el borde HTTP —los bindings finos de `src/app/` y los handlers de `route.ts`— solo transporta. La conducción se separa del trabajo en ambos planos.
+Mismo principio en dos niveles: arriba, un orquestador delgado conduce y delega; abajo, la lógica vive en el núcleo de dominio y el borde HTTP —los bindings finos al framework— solo transporta. La conducción se separa del trabajo en ambos planos.
 
 ## La memoria persistente necesita anclas estables
 
-La memoria persistente del flujo registra decisiones y bugs entre sesiones; las convenciones del proyecto, la wiki y los errores de dominio explícitos (la jerarquía bajo `DomainError`) son sus puntos de anclaje. Menos decisiones abiertas significan menos deriva que la memoria deba reconciliar: la convención reduce lo que hay que recordar. Y la memoria misma se comparte como un artefacto más del repo: los chunks de engram (`.engram/`) viajan por git, de modo que lo que un developer aprende queda disponible para los agentes de todo el equipo (el mecanismo está en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md)).
+La memoria persistente del flujo registra decisiones y bugs entre sesiones; las convenciones del proyecto, la wiki y los errores de dominio explícitos (una jerarquía nombrada de errores) son sus puntos de anclaje. Menos decisiones abiertas significan menos deriva que la memoria deba reconciliar: la convención reduce lo que hay que recordar. Y la memoria misma se comparte como un artefacto más del repo: los chunks de engram (`.engram/`) viajan por git, de modo que lo que un developer aprende queda disponible para los agentes de todo el equipo (el mecanismo está en [SDD, flujo de especificación y Gentle AI](./03_explicacion-sdd.md)).
 
 ## Las reglas operativas del agente derivan de esta wiki
 
@@ -60,7 +60,7 @@ Se revisa en las fronteras de fase —spec → plan → implementación—, no e
 
 Cuando varias personas —cada una con su agente— tocan el mismo repositorio, el mecanismo que evita las colisiones tiene dos capas, y conviene no confundirlas:
 
-- **La capa estructural son los vertical slices.** Una feature = una carpeta = un agente que la posee de punta a punta. Dos agentes trabajando en features distintas casi no pueden pisarse, porque sus diffs viven en carpetas disjuntas y el cruce entre features pasa solo por `public.ts`. Esta capa la impone dependency-cruiser, no la disciplina.
+- **La capa estructural son los vertical slices.** Una feature = una carpeta = un agente que la posee de punta a punta. Dos agentes trabajando en features distintas casi no pueden pisarse, porque sus diffs viven en carpetas disjuntas y el cruce entre features pasa solo por su API pública. Esta capa la impone el linter de dependencias, no la disciplina.
 - **La capa de cadencia es Gitflow.** `main` es producción; `develop` es integración y rama base del trabajo diario; cada cambio nace como `feature/<nombre>` desde `develop` y vuelve por PR con los gates en verde. `release/*` y `hotfix/*` completan el modelo.
 
 El modelo completo de ramas — la doctrina portable que cualquier repo de la agencia hereda:
@@ -68,7 +68,7 @@ El modelo completo de ramas — la doctrina portable que cualquier repo de la ag
 - **`main`** — producción. Solo recibe merges vía PR desde `release/*` o `hotfix/*`; cada merge a `main` es un release desplegable. Nunca se commitea ni pushea directo.
 - **`develop`** — integración y **rama default** del repo (los PR y los clones apuntan acá, no a `main`).
 - **`feature/<nombre>`** — un cambio. Sale de `develop`, vuelve a `develop` por PR.
-- **`release/<versión>`** — estabilización. Sale de `develop`; **en esta rama se hace el bump de `package.json`**; entra a `main` por PR, y sobre ese merge se corta el tag `vX.Y.Z` (== versión) como registro del release.
+- **`release/<versión>`** — estabilización. Sale de `develop`; **en esta rama se hace el bump de la versión del proyecto** (el dato que lee `commands.version` del contrato); entra a `main` por PR, y sobre ese merge se corta el tag `vX.Y.Z` (== versión) como registro del release.
 - **`hotfix/<nombre>`** — urgencia sobre producción. Sale de `main`, vuelve a `main` **y** a `develop`.
 - **Back-merge obligatorio**: tras cada merge a `main` (release o hotfix), `main` vuelve a `develop` por PR. Es el olvido clásico de Gitflow — deja a `develop` con la versión vieja y el próximo release nace mal numerado — y no es opcional.
 
@@ -85,4 +85,4 @@ Dos reglas específicas del trabajo con agentes:
 
 ## El guardarraíl real es ejecutable, no la prosa
 
-Las reglas declaradas en prosa un modelo puede ignorarlas. Lo que de verdad se cumple es lo ejecutable: el scaffolding de `Plop`, `pnpm run check`, los gates de CI que bloquean el merge (`tsc --noEmit`, `biome`, `dependency-cruiser`, `vitest`), el mutation testing con `stryker` como métrica informativa en un job nightly —no gate de PR—, el pipeline de deploy gateado y la suite de dominio en milisegundos. Ese bucle apretado de señales —no el documento— es donde la IA produce código fiable. Es el principio [los guardarraíles que importan son ejecutables](../fundamentos/01_explicacion-principios.md#los-guardarraíles-que-importan-son-ejecutables).
+Las reglas declaradas en prosa un modelo puede ignorarlas. Lo que de verdad se cumple es lo ejecutable: el template del proyecto, el comando `check` del contrato, los gates de CI que bloquean el merge, el mutation testing como métrica informativa en un job nightly —no gate de PR—, el pipeline de deploy gateado y la suite de dominio en milisegundos. Ese bucle apretado de señales —no el documento— es donde la IA produce código fiable. Es el principio [los guardarraíles que importan son ejecutables](../fundamentos/01_explicacion-principios.md#los-guardarraíles-que-importan-son-ejecutables).

@@ -1,6 +1,6 @@
 # forja
 
-Plugin de Claude Code con la **doctrina de ingeniería** completa del equipo y el **bootstrap enterprise-grade** de proyectos nuevos: wiki de 28 documentos, skills, comandos de operador y guardias Gitflow para desarrollar con **gentle-ai** + **engram**.
+Plugin de Claude Code con la **doctrina de ingeniería** del equipo (proceso + operaciones, agnóstica del stack) y el **bootstrap enterprise-grade** de proyectos nuevos: wiki de 19 documentos, skills, comandos de operador y guardias Gitflow para desarrollar con **gentle-ai** + **engram**.
 
 La idea central: la doctrina **no se copia a cada proyecto** — viaja dentro del plugin y se consulta con la skill `forja:doctrina`. Un solo lugar para editarla, cero copias desincronizadas.
 
@@ -46,9 +46,7 @@ Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez**
 
 Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **gh**, **engram** (MCP + CLI para memoria de equipo) y **gentle-ai** (SDD). El plugin instala sin ellas; `/forja:doctor` te dice cuáles faltan.
 
-**Inteligencia de código (LSP):** forja **trae la config LSP del stack** (`.lsp.json`) — al instalar el plugin, Claude Code obtiene definiciones, referencias, hover y símbolos para TypeScript/TSX, CSS, Bash y YAML (con schemas de compose y GitHub Actions). Los binarios de los servidores se instalan aparte (Claude Code no los baja): `pnpm add -g typescript-language-server typescript vscode-langservers-extracted bash-language-server dockerfile-language-server-nodejs yaml-language-server` y, para los diagnósticos de bash, `brew install shellcheck shfmt`. `/forja:doctor` avisa cuáles faltan del PATH.
-
-> **Nota — CSS y Tailwind:** el CSS server (`vscode-css-language-server`, de `vscode-langservers-extracted`) da hover/definición/símbolos de CSS. Se eligió sobre `tailwindcss-language-server` porque el cliente LSP de Claude Code aún no soporta registro dinámico de capacidades ([registerCapability](https://github.com/anthropics/claude-plugins-official/issues/1359)) y el server de Tailwind rompe el `hover` por eso.
+**Inteligencia de código (LSP):** forja **trae la config LSP de la capa de operación** (`.lsp.json`) — al instalar el plugin, Claude Code obtiene inteligencia de código para Bash y YAML (con schemas de compose y GitHub Actions). Los binarios de los servidores se instalan aparte (Claude Code no los baja): `npm install -g bash-language-server dockerfile-language-server-nodejs yaml-language-server` y, para los diagnósticos de bash, `brew install shellcheck shfmt`. `/forja:doctor` avisa cuáles faltan del PATH. Los language servers del stack de la app los define cada proyecto.
 
 > **Límite conocido — Dockerfile:** el LSP de Claude Code matchea **solo por extensión con punto** (`.ts`, `.sh`), y el `Dockerfile` canónico no tiene extensión, así que su servidor **no engancha vía plugin-LSP** (sí matchea `*.dockerfile`). El binario `docker-langserver` igual se lista en `/forja:doctor` porque tu editor (que matchea por nombre de archivo) sí lo aprovecha.
 
@@ -56,7 +54,7 @@ Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **g
 
 En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el marketplace forja: cada integrante que abra el repo con Claude Code recibe el plugin sin instalar nada a mano. Con eso llegan:
 
-- **La doctrina completa** (`wiki/`, 4 tiers) consultable por recetas vía la skill `forja:doctrina` — nunca se lee entera.
+- **La doctrina completa** (`wiki/`, 3 tiers) consultable por recetas vía la skill `forja:doctrina` — nunca se lee entera.
 - **Guardias activas** (hooks): en repos con `.forja.json` se bloquean commits/pushes directos a `main`/`develop`, la atribución de IA en commits y el uso crudo de la CLI de Hetzner. Fuera de proyectos forja, los hooks no hacen nada.
 - **Contexto de sesión**: al abrir una sesión en un proyecto forja, el agente recibe un resumen del proyecto y sus reglas.
 - **Memoria de equipo (engram git sync)**: la memoria del proyecto viaja por git — `.engram/` lleva los chunks committeados; al abrir sesión el hook corre `engram sync --import` (recibís lo del equipo) y al cerrar cada unidad de trabajo se corre `engram sync` y se commitea `.engram/` junto con el código. La DB local nunca entra al repo.
@@ -104,7 +102,7 @@ hooks/            hooks.json + scripts de guardia (bash-guard, session-context)
 bin/              hcloud-agent.sh, validate-firewall-rules.sh, infra-verify.sh (entran al PATH)
 scripts/          forja-instantiate.sh (instanciador determinista de /forja:init)
 templates/        esqueleto de proyecto que instancia /forja:init (fase 3)
-wiki/             la doctrina: 28 docs en 4 tiers + MANIFIESTO derivado
+wiki/             la doctrina: 19 docs en 3 tiers + MANIFIESTO derivado
 ```
 
 ## Editar la doctrina
