@@ -29,9 +29,10 @@ Dentro de una sesión de Claude Code, corré estos dos comandos **uno a la vez**
 ### Tu primer proyecto
 
 ```
-# 1. Creá o entrá a una carpeta vacía y abrí Claude Code ahí
+# 1. Entrá a tu proyecto (repo existente o carpeta vacía) y abrí Claude Code ahí
 # 2. Dentro de la sesión:
-/forja:init            # preflight, esqueleto ejecutable, Gitflow, settings de equipo
+/forja:init            # adopta el proyecto (o arranca uno nuevo): contrato .forja.json,
+                       # scripts de release, Gitflow, settings — sin tocar tu código
 # 3. Seguí los próximos pasos que imprime init (entrevista de requerimientos → SDD → deploy)
 ```
 
@@ -52,7 +53,7 @@ Herramientas del flujo (opcionales para instalar, necesarias para trabajar): **g
 
 ## Qué recibe el equipo automáticamente
 
-En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el marketplace forja: cada integrante que abra el repo con Claude Code recibe el plugin sin instalar nada a mano. Con eso llegan:
+En un proyecto inicializado con `/forja:init`, `.claude/settings.json` referencia el marketplace forja: cada integrante que abra el repo con Claude Code recibe el plugin sin instalar nada a mano. Con eso llegan:
 
 - **La doctrina completa** (`wiki/`, 3 tiers) consultable por recetas vía la skill `forja:doctrina` — nunca se lee entera.
 - **Guardias activas** (hooks): en repos con `.forja.json` se bloquean commits/pushes directos a `main`/`develop`, la atribución de IA en commits y el uso crudo de la CLI de Hetzner. Fuera de proyectos forja, los hooks no hacen nada.
@@ -65,7 +66,7 @@ En un proyecto creado con `/forja:init`, `.claude/settings.json` referencia el m
 
 | Comando | Qué hace |
 | --- | --- |
-| `/forja:init [--force]` | Bootstrap de un proyecto nuevo: preflight, esqueleto ejecutable, Gitflow, GitHub. |
+| `/forja:init [--force]` | Adopta un proyecto existente (default) o arranca uno nuevo: contrato `.forja.json`, scripts de release, Gitflow, GitHub. Nunca pisa archivos del proyecto. |
 | `/forja:deploy preview\|production` | Release por fases con scripts deterministas, gates humanos y backup off-site. |
 | `/forja:rollback preview\|production` | Volver a una versión sana; el plano datos es aparte y human-confirmed. |
 | `/forja:status` | Solo lectura: quién está en qué, PRs abiertos, cambios SDD activos, slices libres. |
@@ -101,7 +102,7 @@ skills/           doctrina, spec-doc-interviewer
 hooks/            hooks.json + scripts de guardia (bash-guard, session-context)
 bin/              hcloud-agent.sh, validate-firewall-rules.sh, infra-verify.sh (entran al PATH)
 scripts/          forja-instantiate.sh (instanciador determinista de /forja:init)
-templates/        esqueleto de proyecto que instancia /forja:init (fase 3)
+templates/        capa agnóstica de proyecto que instala /forja:init (adopt/new)
 wiki/             la doctrina: 19 docs en 3 tiers + MANIFIESTO derivado
 ```
 
