@@ -38,7 +38,7 @@ Este documento es el orquestador del flujo: da el objetivo de cada paso, qué pr
 
 **Objetivo:** establecer la base de verdad y el andamiaje ejecutable antes de cualquier otra acción.
 
-En un repositorio o carpeta en blanco, el primer movimiento es instalar el plugin **forja** (marketplace `aguerodev/forja`) y correr **`/forja:init`** en la carpeta del proyecto. El comando monta el preflight de herramientas (gentle-ai, engram, gh), el esqueleto ejecutable, Gitflow y el `CLAUDE.md` instanciado. La doctrina **no se copia al proyecto**: viaja dentro del plugin —los principios, las normas de operación y el marco metodológico que condiciona todo lo que sigue— y se consulta con la skill `forja:doctrina`. Los comandos del operador (`/forja:deploy`, `/forja:rollback`) y las reglas operativas del agente también viven en el plugin: no hay copias por proyecto que mantener sincronizadas.
+En el repositorio del proyecto —existente o en blanco—, el primer movimiento es instalar el plugin **forja** (marketplace `aguerodev/forja`) y correr **`/forja:init`**. El comando detecta el modo (**adoptar** el proyecto existente, que es el default, o **arrancar** uno nuevo en carpeta vacía), corre el preflight de herramientas (gentle-ai, engram, gh) e instala la **capa agnóstica**: el contrato `.forja.json`, los scripts de release, Gitflow y el `CLAUDE.md` instanciado — sin tocar el código de la app. La doctrina **no se copia al proyecto**: viaja dentro del plugin —los principios, las normas de operación y el marco metodológico que condiciona todo lo que sigue— y se consulta con la skill `forja:doctrina`. Los comandos del operador (`/forja:deploy`, `/forja:rollback`) y las reglas operativas del agente también viven en el plugin: no hay copias por proyecto que mantener sincronizadas.
 
 Los skills del flujo (como `spec-doc-interviewer`, el del paso 1) también viajan dentro del plugin: Claude Code los descubre al instalarlo, sin symlinks ni copias.
 
@@ -59,7 +59,7 @@ Estos cuatro documentos son la lectura mínima para producir código correcto; e
 
 El ancla no se escribe desde cero: `/forja:init` la instancia en la raíz como `CLAUDE.md` desde la plantilla CLAUDE.md del plugin forja, completando el bloque «Contexto del proyecto» (app, repo, dominios, servidor).
 
-**Produce:** el andamiaje del proyecto (preflight, esqueleto, Gitflow) y el `AGENTS.md`/`CLAUDE.md` raíz que indexa la doctrina del plugin.
+**Produce:** la capa agnóstica del proyecto (contrato `.forja.json`, scripts de release, Gitflow) y el `AGENTS.md`/`CLAUDE.md` raíz que indexa la doctrina del plugin.
 
 ---
 
@@ -94,7 +94,7 @@ Ese artefacto cumple dos roles aguas abajo:
 
 Los insumos de entrada son `software_requirements/` **y** `claude_design/`. Gentle AI arranca con `sdd-init` y luego ejecuta el ciclo SDD completo —proposal → spec → design → tasks → apply → verify → archive— para cada cambio.
 
-El esqueleto del repositorio no se escribe a mano: `/forja:init` lo instancia desde el template del plugin, y el comando `install` del contrato deja el entorno reproducible desde el lockfile del proyecto.
+El código de la app lo trae el proyecto —su stack y su esqueleto canónico son decisión propia—; `/forja:init` instala solo la capa de proceso y operación, y el comando `install` del contrato deja el entorno reproducible desde el lockfile del proyecto.
 
 Configuración del flujo en este proyecto:
 
