@@ -18,10 +18,10 @@
 #   1. deployed buildSha matches EXPECTED_SHA (prefix compare). The edge is
 #      probed first (with retries — it can lag through the tunnel); if it is
 #      down or disagrees, the node-side exec is the AUTHORITATIVE fallback:
-#      /api/health ships Cache-Control: no-store, and the container answer
-#      cannot be faked by any cache.
+#      the health endpoint ships Cache-Control: no-store, and the container
+#      answer cannot be faked by any cache.
 #   2. smoke: /            -> 200
-#   3. smoke: /api/health  -> 200
+#   3. smoke: health path  -> 200 (runtime.healthcheckPath, default /api/health)
 #   4. smoke: bogus path   -> 404
 set -euo pipefail
 
@@ -62,7 +62,7 @@ sha_match() {
 deployed_sha=""
 sha_source=""
 for _try in 1 2 3; do
-  body="$(curl -fsS -m 10 "https://${PUBLIC_HOST}/api/health" 2>/dev/null || true)"
+  body="$(curl -fsS -m 10 "https://${PUBLIC_HOST}${FORJA_HEALTH_PATH}" 2>/dev/null || true)"
   candidate="$(json_field "${body}" buildSha)"
   if [ -n "${candidate}" ]; then
     deployed_sha="${candidate}"
@@ -109,7 +109,7 @@ smoke() { # $1 path, $2 expected http code
 }
 
 smoke "/" 200
-smoke "/api/health" 200
+smoke "${FORJA_HEALTH_PATH}" 200
 smoke "/forja-smoke-bogus-$(date +%s)" 404
 
 exit "${FAILURES}"

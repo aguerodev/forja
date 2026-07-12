@@ -7,8 +7,12 @@
 #
 # Provides:
 #   - Project context read from .forja.json at the repo root (parsed with
-#     node, which is always present in this stack). Exports:
+#     node, the runtime of the forja tooling itself). Exports:
 #       APP PUBLIC_NAME DOMAIN DB_USER DB_NAME DOCKER_CONTEXT_PROD
+#     plus the contract fields (v2, each with its v1 fallback — see
+#     wiki/rules/contrato-forja.md):
+#       FORJA_CHECK_CMD FORJA_VERSION_CMD
+#       FORJA_HEALTH_PORT FORJA_HEALTH_PATH FORJA_HEALTH_EXEC
 #   - env_ctx production|preview   (aliases: prod, test)
 #       production -> STACK=<app>_prod   PUBLIC_HOST=<publicName>.<domain>
 #                     export DOCKER_CONTEXT=<dockerContext from .forja.json>
@@ -23,7 +27,8 @@
 #   - dk: docker wrapper that applies the resolved context explicitly.
 #   - REQUIRED_SECRETS: the 7 runtime secrets asserted before any migration
 #     (names match stack.yml and secrets/README.md).
-#   - Helpers: log warn pass fail_line fail, utc_ts, require_cmd, pkg_version,
+#   - Helpers: log warn pass fail_line fail, utc_ts, require_cmd,
+#     project_version (pkg_version is its backwards-compatible alias),
 #     service_container_id, node_health, wait_node_health, json_field.
 #
 # Bash 3.2 compatible on purpose: these scripts run on the operator machine
@@ -93,11 +98,37 @@ for (const key of Object.keys(fields)) {
   }
   console.log(key + "=" + value);
 }
+// Contract fields (v2, optional — see wiki/rules/contrato-forja.md). A v1
+// file has none of them: each falls back to the v1 default so behavior is
+// unchanged. Commands are shell strings, so only newlines are rejected here.
+// (\x27 = single quote: the surrounding shell string is single-quoted.)
+const commands = cfg.commands || {};
+const runtime = cfg.runtime || {};
+const contract = {
+  FORJA_CHECK_CMD: commands.check || "pnpm run check",
+  FORJA_VERSION_CMD:
+    commands.version || "node -p \"require(\x27./package.json\x27).version\"",
+  FORJA_HEALTH_PORT: runtime.port != null ? runtime.port : 8000,
+  FORJA_HEALTH_PATH: runtime.healthcheckPath || "/api/health",
+  FORJA_HEALTH_EXEC: runtime.healthcheckExec || "",
+};
+if (!/^[0-9]+$/.test(String(contract.FORJA_HEALTH_PORT))) {
+  console.error("field runtime.port is not a number: " + contract.FORJA_HEALTH_PORT);
+  process.exit(1);
+}
+for (const key of Object.keys(contract)) {
+  const value = String(contract[key]);
+  if (/[\r\n]/.test(value)) {
+    console.error("field " + key + " contains newlines");
+    process.exit(1);
+  }
+  console.log(key + "=" + value);
+}
 ' "${FORJA_JSON}" 2>&1)" || fail ".forja.json is invalid (${FORJA_JSON}): ${_forja_ctx}"
 
 while IFS='=' read -r _k _v; do
   case "${_k}" in
-    APP|PUBLIC_NAME|DOMAIN|DOCKER_CONTEXT_PROD|DB_USER|DB_NAME)
+    APP|PUBLIC_NAME|DOMAIN|DOCKER_CONTEXT_PROD|DB_USER|DB_NAME|FORJA_CHECK_CMD|FORJA_VERSION_CMD|FORJA_HEALTH_PORT|FORJA_HEALTH_PATH|FORJA_HEALTH_EXEC)
       printf -v "${_k}" '%s' "${_v}"
       export "${_k?}"
       ;;
@@ -173,20 +204,41 @@ service_container_id() {
 }
 
 # Node-side health probe — the AUTHORITATIVE signal (doctrine ops/06 phase 5):
-# exec into the app task and fetch /api/health on localhost. Prints the JSON
-# body (also for a 503 — it still carries buildSha); exit 0 only on HTTP 200.
+# exec into the app task and check health on localhost. When the contract sets
+# runtime.healthcheckExec, that command runs verbatim inside the container;
+# otherwise the probe fetches http://127.0.0.1:<port><path> with whatever the
+# image carries — wget, curl, or node as last resort (the image contract
+# requires at least one). Prints the body; exit 0 only on HTTP 200 (the node
+# fallback also prints a 503 body — it still carries buildSha).
 node_health() {
-  local cid
+  local cid url
   cid="$(service_container_id app)"
   [ -n "${cid}" ] || return 1
-  dk exec "${cid}" node -e '
-fetch("http://127.0.0.1:8000/api/health")
+  if [ -n "${FORJA_HEALTH_EXEC:-}" ]; then
+    dk exec "${cid}" sh -c "${FORJA_HEALTH_EXEC}" 2>/dev/null
+    return
+  fi
+  url="http://127.0.0.1:${FORJA_HEALTH_PORT}${FORJA_HEALTH_PATH}"
+  if dk exec "${cid}" sh -c 'command -v wget >/dev/null 2>&1' 2>/dev/null; then
+    if dk exec "${cid}" wget -qO- "${url}" 2>/dev/null; then return 0; fi
+  elif dk exec "${cid}" sh -c 'command -v curl >/dev/null 2>&1' 2>/dev/null; then
+    if dk exec "${cid}" curl -fsS "${url}" 2>/dev/null; then return 0; fi
+  fi
+  # Unhealthy, or the image has neither wget nor curl: when node is present it
+  # still prints the error body — a 503 carries buildSha and verify.sh reads
+  # it (exact v1 behavior on the node image).
+  if dk exec "${cid}" sh -c 'command -v node >/dev/null 2>&1' 2>/dev/null; then
+    dk exec "${cid}" node -e '
+fetch(process.argv[1])
   .then(async (r) => {
     process.stdout.write(await r.text());
     process.exit(r.ok ? 0 : 1);
   })
   .catch(() => process.exit(1));
-' 2>/dev/null
+' "${url}" 2>/dev/null
+    return
+  fi
+  return 1
 }
 
 # Poll node_health until HTTP 200 or timeout. Prints the healthy body.
@@ -219,8 +271,13 @@ try {
 ' "$2"
 }
 
-# Version from package.json — the single version datum of the project.
-pkg_version() {
-  node -p 'require(process.argv[1] + "/package.json").version' "${FORJA_ROOT}" 2>/dev/null \
-    || fail "cannot read .version from ${FORJA_ROOT}/package.json"
+# The single version datum of the project — runs the contract version command
+# (commands.version from .forja.json; default reads .version from package.json)
+# at the repo root.
+project_version() {
+  (cd "${FORJA_ROOT}" && sh -c "${FORJA_VERSION_CMD}") 2>/dev/null \
+    || fail "cannot resolve the project version (command: ${FORJA_VERSION_CMD})"
 }
+
+# Backwards-compatible alias — existing callers keep working.
+pkg_version() { project_version; }

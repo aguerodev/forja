@@ -26,7 +26,8 @@
 #               job. On the local mutable-tag path (:latest) the app service
 #               is force-rolled (the digest does not change otherwise).
 #   5. health   node-side probe is FATAL and authoritative (docker exec in
-#               the app task -> http://127.0.0.1:8000/api/health); the
+#               the app task -> http://127.0.0.1:<port><path> from the
+#               .forja.json contract, defaults 8000 + /api/health); the
 #               public edge probe is WARN-only (it fuses app/tunnel/
 #               Cloudflare failure domains). After a HEALTHY deploy the app
 #               image is tagged <env>-<utc-ts> (+ v<version> in prod) and
@@ -233,7 +234,7 @@ fi
 edge_code=""
 edge_ok=0
 for _try in 1 2 3; do
-  edge_code="$(curl -s -o /dev/null -m 10 -w '%{http_code}' "https://${PUBLIC_HOST}/api/health" || true)"
+  edge_code="$(curl -s -o /dev/null -m 10 -w '%{http_code}' "https://${PUBLIC_HOST}${FORJA_HEALTH_PATH}" || true)"
   if [ "${edge_code}" = "200" ]; then
     edge_ok=1
     break
@@ -241,7 +242,7 @@ for _try in 1 2 3; do
   sleep 5
 done
 if [ "${edge_ok}" = "1" ]; then
-  pass "edge https://${PUBLIC_HOST}/api/health -> 200"
+  pass "edge https://${PUBLIC_HOST}${FORJA_HEALTH_PATH} -> 200"
 else
   warn "edge probe not 200 (last: ${edge_code:-000}) — WARN only: node-side already validated; check the tunnel if it persists"
 fi
