@@ -1,6 +1,6 @@
 # Swarm stack — 5 services on one overlay network (doctrine: wiki ops/01 +
 # ops/06 - load `forja:doctrina`). No inbound ports: cloudflared opens an
-# OUTBOUND connection (egress 7844) and reaches the app at http://app:8000
+# OUTBOUND connection (egress 7844) and reaches the app at http://app:{{APP_PORT}}
 # over the overlay — the service name IS the DNS name.
 #
 # Deployed EXCLUSIVELY via deploy.sh, which resolves the docker context per
@@ -16,7 +16,7 @@
 # Secrets are external and IMMUTABLE: deploy.sh materializes each key of
 # secrets/<env>.env as `${STACK}_<key>`, only if absent, and asserts all
 # required ones exist before touching the database. The compose key of each
-# secret equals its mount name under /run/secrets/ and the Zod config field:
+# secret equals its mount name under /run/secrets/ and the app config field:
 # the name IS the contract (wiki ops/07).
 #
 # Expected steady state (docker stack services ${STACK}): app, backup,
@@ -35,10 +35,11 @@ services:
   app:
     image: ${APP_IMAGE:-{{APP}}:latest}
     environment:
-      # server.js reads PORT/HOSTNAME; 8000 must match the tunnel ingress
-      # target (http://app:8000). Fixed here as well as in the image so the
-      # contract is visible where the ingress is wired.
-      PORT: "8000"
+      # The app server reads PORT/HOSTNAME; the port must match the tunnel
+      # ingress target (http://app:{{APP_PORT}}) and runtime.port in
+      # .forja.json. Fixed here as well as in the image so the contract is
+      # visible where the ingress is wired.
+      PORT: "{{APP_PORT}}"
       HOSTNAME: "0.0.0.0"
     secrets:
       - db_url
@@ -48,13 +49,14 @@ services:
       - backend
     # No published ports — the ONLY ingress is the tunnel.
     healthcheck:
-      # Readiness governs the rollback: 200 only if the SELECT 1 against the
-      # pool answers within its timeout (db reachable), 503 otherwise.
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      # Readiness governs the rollback: 200 only when the app's health
+      # endpoint (runtime.healthcheckPath in .forja.json) answers healthy.
+      # The runner image must carry a probe command (wget, curl or similar).
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{APP_PORT}}{{HEALTH_PATH}} || curl -fsS http://127.0.0.1:{{APP_PORT}}{{HEALTH_PATH}}"]
       interval: 10s
       timeout: 3s
       retries: 3
-      start_period: 45s # covers the standalone server cold start
+      start_period: 45s # covers the app server cold start
     deploy:
       replicas: 1
       update_config:
@@ -113,7 +115,7 @@ services:
 
   migrate:
     image: ${MIGRATE_IMAGE:-{{APP}}:migrate}
-    # drizzle.config.ts reads the connection from /run/secrets/db_url.
+    # The migrate image reads the connection from /run/secrets/db_url.
     secrets:
       - db_url
     networks:

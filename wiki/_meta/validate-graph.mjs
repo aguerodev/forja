@@ -53,8 +53,7 @@ const LIST_KEYS = new Set(["provides", "reads-before", "related"]);
 
 // Tareas -> doc(s) de entrada. La receta es la clausura de reads-before.
 const RECIPES = {
-  "nueva-feature": ["arq.crear-feature"],
-  "tocar-auth": ["arq.auth"],
+  "nueva-feature": ["proc.sdd", "proc.tdd"],
   desplegar: ["ops.pipeline-cicd"],
   rollback: ["ops.pipeline-cicd"],
   "arrancar-proyecto": ["proc.arrancar", "proc.requerimientos"],

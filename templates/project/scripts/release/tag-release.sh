@@ -6,7 +6,7 @@
 # — no hand-maintained CHANGELOG.md drifting out of date.
 #
 # Contract:
-#   - tag = v<package.json version> (the version is a single datum)
+#   - tag = v<project version> (the contract version command; a single datum)
 #   - annotated, body = `git log <prev-tag>..HEAD --oneline` (full history
 #     for the very first release)
 #   - only from main
@@ -24,7 +24,7 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 [ "${branch}" = "main" ] \
   || fail "tag-release runs only from main (current branch: ${branch}) — the tag records what reached prod"
 
-version="$(pkg_version)"
+version="$(project_version)"
 tag="v${version}"
 head_sha="$(git rev-parse HEAD)"
 
@@ -33,7 +33,7 @@ if existing="$(git rev-parse -q --verify "refs/tags/${tag}^{commit}" 2>/dev/null
     pass "tag ${tag} already exists on HEAD — release already recorded (idempotent)"
     exit 0
   fi
-  fail "tag ${tag} already exists on $(git rev-parse --short "${existing}") but HEAD is $(git rev-parse --short "${head_sha}") — bump the version in package.json (release/* branch) before tagging"
+  fail "tag ${tag} already exists on $(git rev-parse --short "${existing}") but HEAD is $(git rev-parse --short "${head_sha}") — bump the project version (the datum read by commands.version) on a release/* branch before tagging"
 fi
 
 prev_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)"

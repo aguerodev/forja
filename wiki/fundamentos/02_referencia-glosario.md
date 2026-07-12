@@ -9,7 +9,6 @@ provides:
   - "glosario maestro (índice alfabético de términos con enlace a la fuente canónica)"
   - "convención de glosario (definición en una frase + puntero al doc que lo desarrolla)"
 reads-before: []
-related: [arq.hexagonal]
 ---
 
 # Glosario de términos
@@ -27,23 +26,15 @@ Si un término necesita más de una frase, la frase extra vive en su fuente can�
 
 ## Adaptador
 
-Pieza del borde que implementa un puerto sobre una tecnología concreta (p. ej. el repositorio que cumple el puerto definido por el dominio). [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#qué-hace-cada-archivo)
+Pieza del borde que implementa un puerto sobre una tecnología concreta (p. ej. el repositorio que cumple el puerto definido por el dominio). [Reglas de arquitectura](../rules/arquitectura.md)
 
 ## Arquitectura hexagonal
 
-Regla de puertos y adaptadores: el dominio en el centro no conoce el exterior, y el exterior se conecta a él por puertos, con las dependencias apuntando siempre hacia adentro. [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#tercera-decisión-dentro-de-cada-feature-un-núcleo-hexagonal)
+Regla de puertos y adaptadores: el dominio en el centro no conoce el exterior, y el exterior se conecta a él por puertos, con las dependencias apuntando siempre hacia adentro. [Reglas de arquitectura](../rules/arquitectura.md)
 
 ## Cloudflare Tunnel
 
 Conexión saliente que `cloudflared` abre hacia Cloudflare para servir la app sin abrir puertos entrantes; es *remotely-managed* (su configuración vive en Cloudflare y el conector solo necesita un token). [Exponer con Cloudflare Tunnel](../operaciones/05_how-to-exponer-cloudflare-tunnel.md)
-
-## Punto de composición
-
-Único lugar de la feature donde las piezas concretas se conocen: en el slice base es `service.ts` (pre-cablea el adaptador en los use cases); un `composition.ts` con factories y `withTransaction` se extrae solo por el dial. [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#qué-hace-cada-archivo)
-
-## Deny-by-default (scopes)
-
-Modelo de autorización en que todo está denegado salvo lo que un scope concede explícitamente. [Convenciones de código](../arquitectura/03_referencia-convenciones-codigo.md#6-autorización)
 
 ## Dial (el)
 
@@ -79,11 +70,11 @@ Regla de enrutamiento del túnel que mapea un hostname a un servicio (`http://ap
 
 ## Monolito modular
 
-Un único desplegable con fronteras internas fuertes entre módulos: por fuera es uno, por dentro está cortado en módulos que no se entrometen entre sí. [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#primera-decisión-un-monolito-no-microservicios)
+Un único desplegable con fronteras internas fuertes entre módulos: por fuera es uno, por dentro está cortado en módulos que no se entrometen entre sí. [Principios del proyecto](01_explicacion-principios.md)
 
 ## Puerto
 
-Interfaz TypeScript (`interface`) que el dominio define para lo que necesita del exterior, sin conocer su implementación. [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#qué-hace-cada-archivo)
+Interfaz que el dominio define para lo que necesita del exterior, sin conocer su implementación. [Reglas de arquitectura](../rules/arquitectura.md)
 
 ## Red overlay
 
@@ -107,4 +98,4 @@ Orden de actualización en que el swarm arranca la réplica nueva antes de bajar
 
 ## Vertical slice
 
-Feature organizada como módulo autocontenido por contexto de negocio (no por capa técnica), con todo su código en una carpeta. [Arquitectura por dentro](../arquitectura/01_explicacion-arquitectura-hexagonal.md#segunda-decisión-organizar-por-feature-no-por-capa)
+Feature organizada como módulo autocontenido por contexto de negocio (no por capa técnica), con todo su código en una carpeta. [Principios del proyecto](01_explicacion-principios.md)

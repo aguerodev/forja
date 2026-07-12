@@ -7,7 +7,7 @@ git.
 
 ## The name IS the contract
 
-`secret name = Zod config field` (`src/core/config.ts`). The Swarm secret
+`secret name = app config field`. The Swarm secret
 `${STACK}_<key>` is mounted at `/run/secrets/<key>`, and the config loader
 reads each schema field from the file with the same name. No mapping table
 exists. A new secret = a new schema field + a line in `secrets/<env>.env` + a
@@ -17,7 +17,7 @@ build placeholder in the Dockerfile builder stage.
 
 | Key | Consumed by | Notes |
 | --- | --- | --- |
-| `db_url` | `app` (config), `migrate` (drizzle) | `postgres://{{DB_USER}}:<db_password>@db:5432/{{DB_NAME}}` — the host is the service DNS name `db`, never localhost; user, database and password must match the `db` service values. |
+| `db_url` | `app` (config), `migrate` (migrations) | `postgres://{{DB_USER}}:<db_password>@db:5432/{{DB_NAME}}` — the host is the service DNS name `db`, never localhost; user, database and password must match the `db` service values. |
 | `session_secret` | `app` (config) | Random, at least 32 chars. |
 | `app_base_url` | `app` (config) | Prod: `https://{{PUBLIC_NAME}}.{{DOMAIN}}`. Test: `https://<dev>-{{PUBLIC_NAME}}.{{DOMAIN}}` where `<dev>` is your `git config forja.devUser` (fallback `dev`) — it must match the hostname of YOUR tunnel. |
 | `db_password` | `db` (`POSTGRES_PASSWORD_FILE`), `backup` | Must equal the password embedded in `db_url`. |

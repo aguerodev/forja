@@ -97,9 +97,9 @@ Ninguno de estos indica un fallo del aprovisionamiento por sí solo; los dos pri
 
 ### Cache de Cloudflare: la URL pelada puede mostrar una versión vieja
 
-Cloudflare cachea por defecto los assets estáticos que pasan por el túnel (bundles bajo `/_next/static/*` y archivos servidos desde `public/`). Verificar `curl https://<host>/<asset>` (URL sin fingerprint) puede devolver una copia cacheada que no refleja el último deploy, aunque el rollout haya completado con éxito y el nuevo archivo esté en el contenedor.
+Cloudflare cachea por defecto los assets estáticos que pasan por el túnel (bundles del framework y archivos públicos). Verificar `curl https://<host>/<asset>` (URL sin fingerprint) puede devolver una copia cacheada que no refleja el último deploy, aunque el rollout haya completado con éxito y el nuevo archivo esté en el contenedor.
 
-La verificación correcta usa la **URL fingerprinteada** que el browser realmente solicita. Next.js sirve sus bundles bajo `/_next/static/` con un **hash de contenido** incrustado en el nombre del archivo: cuando el contenido cambia, cambia el nombre, y Cloudflare lo trata como un recurso distinto que no puede servir desde cache. Para assets de `public/` que necesiten el mismo trato se versiona la referencia (`/<asset>?v=<hash>`, con el hash derivado del contenido del archivo). Un refresh normal del browser —sin hard-refresh— basta para que el usuario reciba el asset nuevo.
+La verificación correcta usa la **URL fingerprinteada** que el browser realmente solicita. Los frameworks modernos sirven sus bundles con un **hash de contenido** incrustado en el nombre del archivo: cuando el contenido cambia, cambia el nombre, y Cloudflare lo trata como un recurso distinto que no puede servir desde cache. Para assets públicos que necesiten el mismo trato se versiona la referencia (`/<asset>?v=<hash>`, con el hash derivado del contenido del archivo). Un refresh normal del browser —sin hard-refresh— basta para que el usuario reciba el asset nuevo.
 
 Alternativa: verificar directamente dentro del contenedor, evitando la cache por completo:
 
